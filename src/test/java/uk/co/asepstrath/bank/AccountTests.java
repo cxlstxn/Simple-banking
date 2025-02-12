@@ -11,5 +11,15 @@ public class AccountTests {
         Assertions.assertTrue(a != null);
     }
 
+    @Test
+    public void overflowWithdrawl(){
+        Account a = new Account();
+        a.deposit(30);
+        Exception e = new Exception();
+        Assertions.assertThrows(e, a.withdraw(100));
+    }
+
+
+
 
 }
