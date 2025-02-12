@@ -8,8 +8,18 @@ public class AccountTests {
     @Test
     public void createAccount(){
         Account a = new Account();
-        Assertions.assertTrue(a != null);
+        Assertions.assertNotNull(a);
+        Assertions.assertEquals(0, a.getBalance()); // Ensure initial balance is 0
     }
+
+    @Test
+    public void depositFunds() {
+        Account a = new Account();
+        a.deposit(20); // Deposit £20
+        a.deposit(50); // Deposit another £50
+        Assertions.assertEquals(70, a.getBalance()); // Ensure balance is £70
+    }
+
 
 
 }
