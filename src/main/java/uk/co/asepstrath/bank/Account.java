@@ -1,14 +1,28 @@
 package uk.co.asepstrath.bank;
 
+import java.math.BigDecimal;
+import java.util.UUID;
+
 public class Account {
 
 
-    public void deposit(int amount) {
+    private UUID id;
+    private String name;
+    private BigDecimal startingBalance;
+    private boolean roundUpEnabled;
 
+    public Account(UUID id, String name, BigDecimal startingBalance, boolean roundUpEnabled) {
+        this.id = id;
+        this.name = name;
+        this.startingBalance = startingBalance;
+        this.roundUpEnabled = roundUpEnabled;
+    }
+    public void deposit(int amount) {
+        startingBalance = startingBalance.add(BigDecimal.valueOf(amount));
     }
 
     public int getBalance() {
-        return 0;
+        return startingBalance.intValue();
     }
 
 }
