@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public class Account {
-
+    private int balance = 0;
 
     private UUID id;
     private String name;
