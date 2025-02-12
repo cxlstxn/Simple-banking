@@ -11,5 +11,13 @@ public class AccountTests {
         Assertions.assertTrue(a != null);
     }
 
+    @Test
+    public void withdraw20(){
+        Account a = new Account();
+        a.deposit(40);
+        a.withdraw(20);
+        Assertions.assertTrue(a.getBalance() == 20);
+    }
+
 
 }
