@@ -67,6 +67,7 @@ public class App extends Jooby {
             Statement stmt = connection.createStatement();
             stmt.executeUpdate("CREATE TABLE `Example` (`Key` varchar(255),`Value` varchar(255))");
             stmt.executeUpdate("INSERT INTO Example " + "VALUES ('WelcomeMessage', 'Welcome to A Bank')");
+            stmt.executeUpdate("CREATE TABLE 'user' (userId int PRIMARY KEY)");
         } catch (SQLException e) {
             log.error("Database Creation Error",e);
         }
