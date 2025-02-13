@@ -16,16 +16,19 @@ public class Account {
         this.roundUpEnabled = roundUpEnabled;
     }
 
-    public void deposit(int amount) {
-        balance = balance.add(BigDecimal.valueOf(amount));
+    public void deposit(BigDecimal amount) {
+        balance = balance.add(amount);
     }
 
-    public void withdraw(int amount) {
-        balance = balance.subtract(BigDecimal.valueOf(amount));
+    public void withdraw(BigDecimal amount) {
+        if(amount.compareTo(balance) > 0){
+            throw new ArithmeticException("Insufficient funds");
+        }
+        balance = balance.subtract(amount);
     }
 
-    public int getBalance() {
-        return balance.intValue();
+    public BigDecimal getBalance() {
+        return balance;
     }
 
 }
