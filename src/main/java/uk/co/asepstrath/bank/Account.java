@@ -22,11 +22,11 @@ public class Account {
 
     /* This may be useful if a customer wants to create an account and already wants to put money in it
        Commented out as a customer can currently create an account and just then deposit initial amount
-
+*/
     public Account(String name, double balance) {
         this(UUID.randomUUID(), name, balance, false);
     }
-     */
+
 
     public void deposit(double amount) {
         balance = balance.add(BigDecimal.valueOf(amount));
