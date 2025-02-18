@@ -17,6 +17,8 @@ import java.util.ArrayList;
 
 public class App extends Jooby {
 
+    public static ArrayList<Account> accounts = new ArrayList<>(); // Temporary account data
+
     {
         /*
         This section is used for setting up the Jooby Framework modules
@@ -58,7 +60,6 @@ public class App extends Jooby {
      */
     public void onStart() {
         Logger log = getLog();
-        ArrayList<Account> accounts = new ArrayList<>(); // Temporary account data
         accounts.add(new Account("Rachel", 50.00));
         accounts.add(new Account("Monica", 100.00));
         accounts.add(new Account("Phoebe", 76.00));
