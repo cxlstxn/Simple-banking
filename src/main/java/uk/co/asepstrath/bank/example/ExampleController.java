@@ -6,6 +6,8 @@ import io.jooby.annotation.*;
 import io.jooby.exception.StatusCodeException;
 import kong.unirest.core.Unirest;
 import org.slf4j.Logger;
+import uk.co.asepstrath.bank.Account;
+import uk.co.asepstrath.bank.App;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -15,6 +17,7 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+
 
 /*
     Example Controller is a Controller from the MVC paradigm.
@@ -43,6 +46,20 @@ public class ExampleController {
     @GET
     public String welcome() {
         return "Welcome to Jooby!";
+    }
+
+    @GET("/accounts")
+    public String listAccounts() {
+        StringBuilder output = new StringBuilder();
+        output.append("<h1>Account List</h1>");
+        output.append("<ul>");
+
+        for (Account account : App.accounts) {
+            output.append("<li>").append(account.toString()).append("</li>");
+        }
+
+        output.append("</ul>");
+        return output.toString();
     }
 
     /*
@@ -121,3 +138,5 @@ public class ExampleController {
         return "You successfully POSTed: "+message.Message+ " To: "+message.Recipient;
     }
 }
+
+
