@@ -14,6 +14,12 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+// api connect?
+
+import java.io.
+
+
+
 public class App extends Jooby {
 
     {
@@ -65,8 +71,9 @@ public class App extends Jooby {
         try (Connection connection = ds.getConnection()) {
             //
             Statement stmt = connection.createStatement();
-            stmt.executeUpdate("CREATE TABLE `Example` (`Key` varchar(255),`Value` varchar(255))");
-            stmt.executeUpdate("INSERT INTO Example " + "VALUES ('WelcomeMessage', 'Welcome to A Bank')");
+            stmt.executeUpdate("CREATE TABLE `Accounts` (`uuid` varchar(255),`FirstName` varchar(255), `LastName` varchar(255), `balance` varchar(255)");
+            stmt.executeUpdate("CREATE TABLE `Transactions` (`fromuuid` varchar(255), `touuid` varchar(255), `Type` varchar(255), `amount` varchar(255)");
+            stmt.executeUpdate("CREATE TABLE `Businesses` (`id` varchar(255), `name` varchar(255), `category` varchar(255)");
         } catch (SQLException e) {
             log.error("Database Creation Error",e);
         }
