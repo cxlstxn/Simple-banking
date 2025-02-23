@@ -51,14 +51,13 @@ public class ExampleController {
     @GET("/accounts")
     public String listAccounts() {
         StringBuilder output = new StringBuilder();
-        output.append("<h1>Account List</h1>");
-        output.append("<ul>");
+        output.append("Account List");
+        output.append("\n");
 
         for (Account account : App.accounts) {
-            output.append("<li>").append(account.toString()).append("</li>");
+            output.append(account.toString()).append("\n");
         }
 
-        output.append("</ul>");
         return output.toString();
     }
 

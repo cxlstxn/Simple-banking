@@ -15,6 +15,17 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.Scanner;
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+
+
 public class App extends Jooby {
 
     public static ArrayList<Account> accounts = new ArrayList<>(); // Temporary account data
@@ -60,14 +71,46 @@ public class App extends Jooby {
      */
     public void onStart() {
         Logger log = getLog();
-        accounts.add(new Account("Rachel", 50.00));
-        accounts.add(new Account("Monica", 100.00));
-        accounts.add(new Account("Phoebe", 76.00));
-        accounts.add(new Account("Joey", 23.90));
-        accounts.add(new Account("Chandler", 3.00));
-        accounts.add(new Account("Ross", 54.32));
+
+        try {
+            URL url = new URL("https://api.asep-strath.co.uk/api/accounts");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.connect();
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode != 200) {
+                throw new RuntimeException("HttpResponseCode: " + responseCode);
+            }
+
+            StringBuilder inline = new StringBuilder();
+            Scanner scanner = new Scanner(url.openStream());
+            while (scanner.hasNext()) {
+                inline.append(scanner.nextLine());
+            }
+            scanner.close();
+
+
+            JsonReader jsonReader = Json.createReader(new StringReader(inline.toString()));
+            JsonArray jsonArray = jsonReader.readArray();
+            jsonReader.close();
+
+
+            for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
+                accounts.add(new Account(jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue()));
+            }
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
         log.info("Starting Up...");
 
+
+
+        // database stuff not setup yet.
         // Fetch DB Source
         DataSource ds = require(DataSource.class);
         // Open Connection to DB
