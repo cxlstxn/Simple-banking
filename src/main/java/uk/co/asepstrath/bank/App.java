@@ -130,10 +130,7 @@ public class App extends Jooby {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
 
-            // Debug: Print response code and body
-            System.out.println("Response Code: " + connection.getResponseCode());
             String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
-            System.out.println("Response Body: " + responseBody);
 
             // Parse the XML
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -166,11 +163,8 @@ public class App extends Jooby {
                         String date = element.getElementsByTagName("timestamp").item(0).getTextContent(); // Use "timestamp" instead of "date"
                         String type = element.getElementsByTagName("type").item(0).getTextContent();
 
-                        // Debug: Print parsed transaction
-                        System.out.println("Parsed Transaction: " + id + ", " + from + ", " + to + ", " + amount + ", " + date + ", " + type);
-
                         // Add transaction to the list
-                        transactions.add(new Transaction(id, amount, to, from, date, type));
+                        transactions.add(new Transaction(id, amount, date, from, to, type));
                     }
                 }
             }
