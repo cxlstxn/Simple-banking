@@ -60,4 +60,12 @@ public class Account {
         //return "ID: " + id + " | Name: " + name + " | Balance: " + balance + " | Round up: " + roundUpEnabled;
         //Not too sure what to put into the output string
     }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getId() {
+        return id.toString();
+    }
 }

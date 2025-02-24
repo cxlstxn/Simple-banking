@@ -1,6 +1,7 @@
 package uk.co.asepstrath.bank;
 
 import io.jooby.netty.NettyServer;
+import org.xml.sax.SAXException;
 import uk.co.asepstrath.bank.BankController;
 import io.jooby.Jooby;
 import io.jooby.handlebars.HandlebarsModule;
@@ -10,7 +11,11 @@ import org.slf4j.Logger;
 import uk.co.asepstrath.bank.Account;
 
 import javax.sql.DataSource;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -20,15 +25,25 @@ import java.net.URL;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Scanner;
+import java.util.UUID;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.ParserConfigurationException;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 public class App extends Jooby {
 
     public static ArrayList<Account> accounts = new ArrayList<>(); // Temporary account data
+    public static ArrayList<Transaction> transactions = new ArrayList<>(); // Temporary transaction data
 
     {
         /*
@@ -44,7 +59,7 @@ public class App extends Jooby {
         For example in the dice template (dice.hbs) it references "assets/dice.png" which is in resources/assets folder
          */
         assets("/assets/*", "/assets");
-        assets("/service_worker.js","/service_worker.js");
+        assets("/service_worker.js", "/service_worker.js");
 
         /*
         Now we set up our controllers and their dependencies
@@ -52,7 +67,7 @@ public class App extends Jooby {
         DataSource ds = require(DataSource.class);
         Logger log = getLog();
 
-        mvc(new BankController_(ds,log));
+        mvc(new BankController_(ds, log));
 
         /*
         Finally we register our application lifecycle methods
@@ -71,6 +86,7 @@ public class App extends Jooby {
      */
     public void onStart() {
         Logger log = getLog();
+        log.info("Starting Up...");
 
         try {
             URL url = new URL("https://api.asep-strath.co.uk/api/accounts");
@@ -106,22 +122,97 @@ public class App extends Jooby {
         }
 
 
-        log.info("Starting Up...");
 
+        try {
+            // URL of the API
+            String urlString = "https://api.asep-strath.co.uk/api/transactions";
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
 
+            // Debug: Print response code and body
+            System.out.println("Response Code: " + connection.getResponseCode());
+            String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
+            System.out.println("Response Body: " + responseBody);
 
-        // database stuff not setup yet.
+            // Parse the XML
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.parse(new InputSource(new StringReader(responseBody)));
+
+            // Normalize the XML structure
+            document.getDocumentElement().normalize();
+
+            // Get all <results> elements
+            NodeList resultsList = document.getElementsByTagName("results");
+            System.out.println("Number of <results> elements: " + resultsList.getLength());
+
+            // Iterate through <results> elements
+            for (int i = 0; i < resultsList.getLength(); i++) {
+                Node node = resultsList.item(i);
+
+                // Check if the <results> element has the correct type
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                    Element element = (Element) node;
+
+                    // Check if the xsi:type attribute is "transactionModel"
+                    String typeAttribute = element.getAttribute("xsi:type");
+                    if ("transactionModel".equals(typeAttribute)) {
+                        // Extract transaction data
+                        String id = element.getElementsByTagName("id").item(0).getTextContent();
+                        String from = element.getElementsByTagName("from").item(0).getTextContent();
+                        String to = element.getElementsByTagName("to").item(0).getTextContent();
+                        double amount = Double.parseDouble(element.getElementsByTagName("amount").item(0).getTextContent());
+                        String date = element.getElementsByTagName("timestamp").item(0).getTextContent(); // Use "timestamp" instead of "date"
+                        String type = element.getElementsByTagName("type").item(0).getTextContent();
+
+                        // Debug: Print parsed transaction
+                        System.out.println("Parsed Transaction: " + id + ", " + from + ", " + to + ", " + amount + ", " + date + ", " + type);
+
+                        // Add transaction to the list
+                        transactions.add(new Transaction(id, amount, to, from, date, type));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error parsing XML: ", e);
+        }
+
         // Fetch DB Source
         DataSource ds = require(DataSource.class);
+
         // Open Connection to DB
         try (Connection connection = ds.getConnection()) {
-            //
             Statement stmt = connection.createStatement();
-            stmt.executeUpdate("CREATE TABLE `Example` (`Key` varchar(255),`Value` varchar(255))");
-            stmt.executeUpdate("INSERT INTO Example " + "VALUES ('WelcomeMessage', 'Welcome to A Bank')");
-            stmt.executeUpdate("CREATE TABLE 'user' (userId int PRIMARY KEY)");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id VARCHAR(255), Name VARCHAR(255), Balance DOUBLE)");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id VARCHAR(255), `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255))");
+
+            // Insert accounts into the database using prepared statements
+            String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
+                for (Account account : accounts) {
+                    preparedStatement.setString(1, account.getId().toString());
+                    preparedStatement.setString(2, account.getName());
+                    preparedStatement.setDouble(3, account.getBalance().doubleValue());
+                    preparedStatement.executeUpdate();
+                }
+            }
+
+            // Insert transactions into the database using prepared statements
+            String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date) VALUES (?, ?, ?, ?, ?)";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(insertTransactionSql)) {
+                for (Transaction transaction : transactions) {
+                    preparedStatement.setString(1, transaction.getId());
+                    preparedStatement.setString(2, transaction.getFrom());
+                    preparedStatement.setString(3, transaction.getTo());
+                    preparedStatement.setDouble(4, transaction.getAmount());
+                    preparedStatement.setString(5, transaction.getDate());
+                    preparedStatement.executeUpdate();
+                }
+            }
         } catch (SQLException e) {
-            log.error("Database Creation Error",e);
+            log.error("Database Creation Error", e);
         }
     }
 
@@ -131,5 +222,4 @@ public class App extends Jooby {
     public void onStop() {
         System.out.println("Shutting Down...");
     }
-
 }

@@ -59,6 +59,19 @@ public class BankController {
         }
 
         return output.toString();
+        }
+
+    @GET("/transactions")
+    public String listTransactions() {
+    StringBuilder output = new StringBuilder();
+    output.append("Transaction List");
+    output.append("\n");
+
+    for (Transaction transaction : App.transactions) {
+        output.append(transaction.toString()).append("\n");
+    }
+
+    return output.toString();
     }
 
     /*
