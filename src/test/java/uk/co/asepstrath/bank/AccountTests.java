@@ -24,7 +24,7 @@ public class AccountTests {
         Account a = new Account("TestCheckInitialBalance"); // when a new account is created then the name only needs to be inputted
         Assertions.assertEquals(BigDecimal.valueOf(0.0), a.getBalance());
     }
-    
+
     @Test   // Depositing £50 in an account with £20 should result in an account containing £70
     public void depositFunds(){
         Account a = new Account(UUID.randomUUID(), "TestDepositFunds", 20, false);
