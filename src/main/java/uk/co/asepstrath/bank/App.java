@@ -11,21 +11,17 @@ import org.slf4j.Logger;
 import uk.co.asepstrath.bank.Account;
 
 import javax.sql.DataSource;
-import java.io.InputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
+import java.util.*;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.Scanner;
-import java.util.UUID;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -75,6 +71,7 @@ public class App extends Jooby {
         onStarted(() -> onStart());
         onStop(() -> onStop());
     }
+
 
     public static void main(final String[] args) {
         runApp(args, App::new);
@@ -142,7 +139,6 @@ public class App extends Jooby {
 
             // Get all <results> elements
             NodeList resultsList = document.getElementsByTagName("results");
-            System.out.println("Number of <results> elements: " + resultsList.getLength());
 
             // Iterate through <results> elements
             for (int i = 0; i < resultsList.getLength(); i++) {
@@ -181,6 +177,7 @@ public class App extends Jooby {
             Statement stmt = connection.createStatement();
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id VARCHAR(255), Name VARCHAR(255), Balance DOUBLE)");
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id VARCHAR(255), `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255))");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
 
             // Insert accounts into the database using prepared statements
             String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
@@ -189,6 +186,30 @@ public class App extends Jooby {
                     preparedStatement.setString(1, account.getId().toString());
                     preparedStatement.setString(2, account.getName());
                     preparedStatement.setDouble(3, account.getBalance().doubleValue());
+                    preparedStatement.executeUpdate();
+                }
+            }
+
+            List<List<String>> data = new ArrayList<>(); // list of lists to store data
+            String file = ""; // replace with the path to your own CSV file
+            FileReader fr = new FileReader(file);
+            BufferedReader br = new BufferedReader(fr);
+
+            // Reading until we run out of lines
+            String line = br.readLine();
+            while (line != null) {
+                List<String> lineData = Arrays.asList(line.split(","));
+                data.add(lineData);
+                line = br.readLine();
+            }
+
+            String InsertBusinessSql = "INSERT INTO Businesses (id, Name, Category, Sanctioned) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(InsertBusinessSql)) {
+                for (List<String> list : data) {
+                    preparedStatement.setString(1, list.get(0));
+                    preparedStatement.setString(2, list.get(1));
+                    preparedStatement.setString(3, list.get(2));
+                    preparedStatement.setString(4, list.get(3));
                     preparedStatement.executeUpdate();
                 }
             }
@@ -207,6 +228,10 @@ public class App extends Jooby {
             }
         } catch (SQLException e) {
             log.error("Database Creation Error", e);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -216,4 +241,5 @@ public class App extends Jooby {
     public void onStop() {
         System.out.println("Shutting Down...");
     }
+
 }
