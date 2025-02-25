@@ -191,7 +191,7 @@ public class App extends Jooby {
             }
 
             List<List<String>> data = new ArrayList<>(); // list of lists to store data
-            String file = ""; // replace with the path to your own CSV file
+            String file = "src/main/resources/data/businesses.csv"; // relative path to the CSV file
             FileReader fr = new FileReader(file);
             BufferedReader br = new BufferedReader(fr);
 
