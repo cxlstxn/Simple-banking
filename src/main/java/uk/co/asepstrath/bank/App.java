@@ -1,6 +1,11 @@
 package uk.co.asepstrath.bank;
 
 import io.jooby.netty.NettyServer;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import uk.co.asepstrath.bank.BankController;
 import io.jooby.Jooby;
@@ -8,16 +13,12 @@ import io.jooby.handlebars.HandlebarsModule;
 import io.jooby.helper.UniRestExtension;
 import io.jooby.hikari.HikariModule;
 import org.slf4j.Logger;
-import uk.co.asepstrath.bank.Account;
 
 import javax.sql.DataSource;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 
 import java.net.HttpURLConnection;
@@ -26,15 +27,8 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 public class App extends Jooby {
 
@@ -108,17 +102,13 @@ public class App extends Jooby {
             JsonArray jsonArray = jsonReader.readArray();
             jsonReader.close();
 
-
             for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
                 accounts.add(new Account(jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue()));
             }
 
-
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
 
         try {
             // URL of the API
@@ -164,7 +154,8 @@ public class App extends Jooby {
                     }
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
             log.error("Error parsing XML: ", e);
         }
@@ -172,67 +163,9 @@ public class App extends Jooby {
         // Fetch DB Source
         DataSource ds = require(DataSource.class);
 
-        // Open Connection to DB
-        try (Connection connection = ds.getConnection()) {
-            Statement stmt = connection.createStatement();
-            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id VARCHAR(255), Name VARCHAR(255), Balance DOUBLE)");
-            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id VARCHAR(255), `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255))");
-            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
-
-            // Insert accounts into the database using prepared statements
-            String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
-            try (PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
-                for (Account account : accounts) {
-                    preparedStatement.setString(1, account.getId().toString());
-                    preparedStatement.setString(2, account.getName());
-                    preparedStatement.setDouble(3, account.getBalance().doubleValue());
-                    preparedStatement.executeUpdate();
-                }
-            }
-
-            List<List<String>> data = new ArrayList<>(); // list of lists to store data
-            String file = "src/main/resources/data/businesses.csv"; // relative path to the CSV file
-            FileReader fr = new FileReader(file);
-            BufferedReader br = new BufferedReader(fr);
-
-            // Reading until we run out of lines
-            String line = br.readLine();
-            while (line != null) {
-                List<String> lineData = Arrays.asList(line.split(","));
-                data.add(lineData);
-                line = br.readLine();
-            }
-
-            String InsertBusinessSql = "INSERT INTO Businesses (id, Name, Category, Sanctioned) VALUES (?, ?, ?, ?)";
-            try (PreparedStatement preparedStatement = connection.prepareStatement(InsertBusinessSql)) {
-                for (List<String> list : data) {
-                    preparedStatement.setString(1, list.get(0));
-                    preparedStatement.setString(2, list.get(1));
-                    preparedStatement.setString(3, list.get(2));
-                    preparedStatement.setString(4, list.get(3));
-                    preparedStatement.executeUpdate();
-                }
-            }
-
-            // Insert transactions into the database using prepared statements
-            String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date) VALUES (?, ?, ?, ?, ?)";
-            try (PreparedStatement preparedStatement = connection.prepareStatement(insertTransactionSql)) {
-                for (Transaction transaction : transactions) {
-                    preparedStatement.setString(1, transaction.getId());
-                    preparedStatement.setString(2, transaction.getFrom());
-                    preparedStatement.setString(3, transaction.getTo());
-                    preparedStatement.setDouble(4, transaction.getAmount());
-                    preparedStatement.setString(5, transaction.getDate());
-                    preparedStatement.executeUpdate();
-                }
-            }
-        } catch (SQLException e) {
-            log.error("Database Creation Error", e);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        // Create Database Controller and setup the database
+        DatabaseController dbController = new DatabaseController(ds, log);
+        dbController.setupDatabase();
     }
 
     /*
@@ -241,5 +174,4 @@ public class App extends Jooby {
     public void onStop() {
         System.out.println("Shutting Down...");
     }
-
 }
