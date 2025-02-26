@@ -1,0 +1,68 @@
+id,name,category,sanctioned
+ALD,Aldi,Groceries,false
+AMA,Amazon,Online Retailer,false
+ARG,Argos,Online Retailer,false
+BOO,Boom Battle Bar,Entertainment,false
+BOT,Boots,Health & Beauty,false
+BUR,Burger King,Eating Out,false
+CAF,Cafe Nero,Coffee,false
+CEX,CEX,Entertainment,true
+CLA,Clarks,Clothing,false
+CLI,Clinton Cards,Gifts,false
+COS,Costa,Coffee,false
+EE,EE,Utilities,false
+FLY,Flying Tiger,Gifts,false
+GIF,GiffGaff,Utilities,false
+GRE,Greggs,Eating Out,false
+H&M,H&M,Clothing,false
+HAM,Hamleys,Entertainment,false
+HAR,Hard Rock Cafe,Eating Out,true
+HMV,HMV,Entertainment,false
+IKE,Ikea,Furniture,false
+JDS,JD Sports,Clothing,false
+JOH,John Lewis,Department Store,false
+KFC,KFC,Eating Out,false
+KRI,Krispy Kreme,Eating Out,false
+LEG,Lego,Entertainment,false
+LID,Lidl,Groceries,false
+LOY,Loyds Pharmacy,Health & Beauty,false
+LUS,Lush,Health & Beauty,false
+MAR,Marks & Spencers,Groceries,false
+MCD,McDonalds,Eating Out,false
+MIL,Millies Cookies,Eating Out,false
+MOR,Morrisons,Groceries,false
+NAN,Nandos,Eating Out,false
+NEW,New Look,Clothing,false
+NEX,Next,Clothing,false
+NIP,Nippon Kitchen,Eating Out,false
+NOR,North Face,Clothing,false
+O2,O2,Utilities,false
+ODE,Odeon,Entertainment,false
+OPT,Optical Express,Opticians,false
+PAN,Pandora,Jewlery,false
+PAP,Paperchase,Gifts,false
+PIZ,Pizza Hut,Eating Out,false
+RIV,River Island,Clothing,false
+SAI,Sainsburies,Groceries,false
+SCH,Schuh,Clothing,false
+SCO,Scotmid,Groceries,false
+SPA,Spar,Groceries,false
+SPE,Specsavers,Opticians,false
+STA,Starbucks,Coffee,false
+SUP,Superdrug,Health & Beauty,false
+SWA,Swatch,Jewlery,false
+TEN,TenPin,Entertainment,false
+TES,Tesco,Groceries,false
+THE,The Perfume Shop,Health & Beauty,false
+THR,Three,Utilities,false
+TIM,Timpson,Other,false
+TOP,Topolabamba,Eating Out,false
+TRE,Trespass,Clothing,false
+URB,Urban Outfitters,Clothing,false
+VIR,Virgin Media,Utilities,false
+VIS,Vision Express,Opticians,false
+VOD,Vodafone,Utilities,false
+VUE,VUE,Entertainment,false
+WAT,Waterstones,Books,false
+WHS,WH Smith,Books,false
+YAN,Yankee Candle,Gifts,true

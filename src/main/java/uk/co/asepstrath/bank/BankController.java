@@ -1,4 +1,4 @@
-package uk.co.asepstrath.bank.example;
+package uk.co.asepstrath.bank;
 
 import io.jooby.ModelAndView;
 import io.jooby.StatusCode;
@@ -24,8 +24,8 @@ import java.util.Random;
     The @Path Annotation will tell Jooby what /path this Controller can respond to,
     in this case the controller will respond to requests from <host>/example
  */
-@Path("/example")
-public class ExampleController {
+@Path("/scotbank")
+public class BankController {
 
     private final DataSource dataSource;
     private final Logger logger;
@@ -33,7 +33,7 @@ public class ExampleController {
     /*
     This constructor can take in any dependencies the controller may need to respond to a request
      */
-    public ExampleController(DataSource ds, Logger log) {
+    public BankController(DataSource ds, Logger log) {
         dataSource = ds;
         logger = log;
     }
@@ -51,15 +51,27 @@ public class ExampleController {
     @GET("/accounts")
     public String listAccounts() {
         StringBuilder output = new StringBuilder();
-        output.append("<h1>Account List</h1>");
-        output.append("<ul>");
+        output.append("Account List");
+        output.append("\n");
 
         for (Account account : App.accounts) {
-            output.append("<li>").append(account.toString()).append("</li>");
+            output.append(account.toString()).append("\n");
         }
 
-        output.append("</ul>");
         return output.toString();
+        }
+
+    @GET("/transactions")
+    public String listTransactions() {
+    StringBuilder output = new StringBuilder();
+    output.append("Transaction List");
+    output.append("\n");
+
+    for (Transaction transaction : App.transactions) {
+        output.append(transaction.toString()).append("\n");
+    }
+
+    return output.toString();
     }
 
     /*
@@ -95,6 +107,25 @@ public class ExampleController {
             // And return a HTTP 500 error to the requester
             throw new StatusCodeException(StatusCode.SERVER_ERROR, "Database Error Occurred");
         }
+    }
+
+    @GET("/login")
+    public ModelAndView login(@QueryParam String name) {
+
+        // If no name has been sent within the query URL
+        if (name == null) {
+            name = "Your";
+        } else {
+            name = name + "'s";
+        }
+
+        // we must create a model to pass to the "dice" template
+        Map<String, Object> model = new HashMap<>();
+        model.put("random", new Random().nextInt(6));
+        model.put("name", name);
+
+        return new ModelAndView("login.hbs", model);
+
     }
 
     /*
@@ -133,10 +164,7 @@ public class ExampleController {
     The @POST annotation registers this function as a HTTP POST handler.
     It will look at the body of the POST request and try to deserialise into a MyMessage object
      */
-    @POST
-    public String post(MyMessage message) {
-        return "You successfully POSTed: "+message.Message+ " To: "+message.Recipient;
-    }
+
 }
 
 

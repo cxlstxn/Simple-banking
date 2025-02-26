@@ -46,28 +46,29 @@ public class AccountTests {
         Assertions.assertEquals(BigDecimal.valueOf(30.0), a.getBalance()); // Check to see if amount changes
     }
 
-   @Test   // Starting with an account with £20, deposit £10 five times then withdraw £20 three times. The account should end with £10
-   public void depositAndWithdraw(){
-       Account a = new Account(UUID.randomUUID(), "TestDepositAndWithdraw", 20, false);
-       for (int i = 0; i < 5; i++){
-           a.deposit(10);
-       }
-       for (int i = 0; i < 3; i++){
-           a.withdraw(20);
-       }
-       Assertions.assertEquals(BigDecimal.valueOf(10.0), a.getBalance());
-   }
+    @Test   // Starting with an account with £20, deposit £10 five times then withdraw £20 three times. The account should end with £10
+    public void depositAndWithdraw(){
+        Account a = new Account(UUID.randomUUID(), "TestDepositAndWithdraw", 20, false);
+        for (int i = 0; i < 5; i++){
+            a.deposit(10);
+        }
+        for (int i = 0; i < 3; i++){
+            a.withdraw(20);
+        }
+        Assertions.assertEquals(BigDecimal.valueOf(10.0), a.getBalance());
+    }
 
-   @Test    // Depositing £17.56 into an account with £5.45 should result in an account containing £23.01
+    @Test    // Depositing £17.56 into an account with £5.45 should result in an account containing £23.01
     public void depositPennies(){
-       Account a = new Account(UUID.randomUUID(), "TestDepositAndWithdraw", 5.45, false);
-       a.deposit(17.56);
-       Assertions.assertEquals(BigDecimal.valueOf(23.01), a.getBalance());
-   }
+        Account a = new Account(UUID.randomUUID(), "TestDepositAndWithdraw", 5.45, false);
+        a.deposit(17.56);
+        Assertions.assertEquals(BigDecimal.valueOf(23.01), a.getBalance());
+    }
 
-   @Test
+    @Test
     public void stringAccount(){  //Testing override of .toString() method to return a string with the account name and balance
         Account a = new Account(UUID.randomUUID(), "TestStringAccount", 10, false);
         Assertions.assertEquals("Name: TestStringAccount | Balance: 10.0", a.toString());
-   }
+    }
 }
+
