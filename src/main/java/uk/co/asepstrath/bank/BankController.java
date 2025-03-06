@@ -81,33 +81,33 @@ public class BankController {
     }
 
     @GET("/login")
-    public ModelAndView login(@QueryParam String name) {
+    public ModelAndView login(@QueryParam String email) {
 
         // If no name has been sent within the query URL
-        if (name == null) {
-            name = "Your";
+        if (email == null) {
+            email = "Your";
         } else {
-            name = name + "'s";
+            email = email + "'s";
         }
 
         // we must create a model to pass to the "login" template
         Map<String, Object> model = new HashMap<>();
-        model.put("name", name);
+        model.put("email", email);
 
         return new ModelAndView("login.hbs", model);
     }
 
     @GET("/dashboard")
-    public ModelAndView dashboard(@QueryParam String name) {
+    public ModelAndView dashboard(@QueryParam String email) {
         // we must create a model to pass to the "dashboard" template
         Map<String, Object> model = new HashMap<>();
-        model.put("name", name);
-        
         DatabaseController dbController = new DatabaseController(dataSource);
-        model.put("balance", dbController.getBalanceFromName(name));
-        model.put("id", dbController.getIdFromName(name));
-        UUID id = dbController.getIdFromName(name);
-        model.put("transactions", dbController.getTransactionsById(id));
+        UUID accountID = dbController.getIDfromEmail(email);
+        
+        model.put("name", dbController.getNamefromID(accountID));
+        model.put("balance", dbController.getBalanceFromID(accountID));
+        model.put("id", accountID);
+        model.put("transactions", dbController.getTransactionsById(accountID));
         return new ModelAndView("dashboard.hbs", model);
     }
 
@@ -118,15 +118,15 @@ public class BankController {
     }
 
     @POST("/signup")
-    public ModelAndView handleSignup(@FormParam String name, @FormParam String password) {
-        if (name == null || password == null || name.isEmpty() || password.isEmpty()) {
+    public ModelAndView handleSignup(@FormParam String email, @FormParam String name, @FormParam String password) {
+        if (email == null || name == null || password == null || email.isEmpty() || name.isEmpty() || password.isEmpty()) {
             throw new StatusCodeException(StatusCode.BAD_REQUEST, "Name and password are required.");
         }
-
-        
         DatabaseController dbController = new DatabaseController(dataSource, logger);
         UUID id = UUID.randomUUID();
-        dbController.createUser(name, password, id);
+
+        dbController.createUser(email, name, password, id);
+
         dbController.addAccount(new Account(id, name, 0));
         
         // Redirect to login page

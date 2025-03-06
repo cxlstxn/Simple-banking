@@ -50,8 +50,8 @@ public class DatabaseController {
         Statement stmt = connection.createStatement();
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255))");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255) PRIMARY KEY, `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
+        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
+        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
     }
 
     private void insertBusinesses(Connection connection) throws SQLException {
@@ -194,25 +194,76 @@ public class DatabaseController {
         } catch (SQLException e) {
             log.error("Error retrieving transactions for account with ID: " + id, e);
         }
-        
+
         Collections.reverse(transactions); // reversing so most recent transactions are first
-        
+
         return transactions;
     }
 
-    public void createUser(String name, String password, UUID account) {
-        String insertUserSql = "INSERT INTO Users (id, Name, Password, Role, Account) VALUES (?, ?, ?, ?, ?)";
+    public void createUser(String email, String name, String password, UUID account) {
+        String query = "INSERT INTO Users (id, Email, Name, Password, Role, Account) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(insertUserSql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setObject(1, UUID.randomUUID());
-            preparedStatement.setString(2, name);
-            preparedStatement.setString(3, password);
-            preparedStatement.setString(4, "user");
-            preparedStatement.setObject(5, account);
+            preparedStatement.setString(2, email);
+            preparedStatement.setString(3, name);
+            preparedStatement.setString(4, password);
+            preparedStatement.setString(5, "User");
+            preparedStatement.setObject(6, account);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            log.error("Error adding user: " + name, e);
+            log.error("Error creating user with Email: " + email, e);
         }
     }
+
+    public UUID getIDfromEmail(String email) {
+        String query = "SELECT Account FROM Users WHERE Email = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, email);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return UUID.fromString(rs.getString("Account"));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving user with Email: " + email, e);
+        }
+        return null;
+    }
+
+    public String getNamefromID(UUID id) {
+        String query = "SELECT Name FROM Users WHERE Account = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setObject(1, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("Name");
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving user with ID: " + id, e);
+        }
+        return null;
+    }
+
+    public String getBalanceFromID(UUID id) {
+        String query = "SELECT Balance FROM Accounts WHERE id = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setObject(1, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return String.valueOf(rs.getDouble("Balance"));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving account with ID: " + id, e);
+        }
+        return null;
+    }
+
+
 
 }
