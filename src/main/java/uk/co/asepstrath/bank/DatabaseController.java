@@ -291,7 +291,7 @@ public class DatabaseController {
                 transactionStmt.setObject(2, fromAccountId);
                 transactionStmt.setObject(3, toAccountId);
                 transactionStmt.setDouble(4, amount);
-                transactionStmt.setString(5, new java.util.Date().toString());
+                transactionStmt.setString(5, new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(new java.util.Date()));
                 transactionStmt.executeUpdate();
 
                 connection.commit();
