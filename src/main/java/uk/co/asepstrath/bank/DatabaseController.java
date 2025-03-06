@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.Collections;
 
 public class DatabaseController {
 
@@ -193,6 +194,9 @@ public class DatabaseController {
         } catch (SQLException e) {
             log.error("Error retrieving transactions for account with ID: " + id, e);
         }
+        
+        Collections.reverse(transactions); // reversing so most recent transactions are first
+        
         return transactions;
     }
 

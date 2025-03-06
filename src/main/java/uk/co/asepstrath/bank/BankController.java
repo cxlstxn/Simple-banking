@@ -4,6 +4,7 @@ import io.jooby.ModelAndView;
 import io.jooby.StatusCode;
 import io.jooby.annotation.*;
 import io.jooby.exception.StatusCodeException;
+import io.jooby.handlebars.HandlebarsModule;
 import kong.unirest.core.Unirest;
 
 import org.h2.engine.Database;
@@ -46,6 +47,8 @@ public class BankController {
     The @GET annotation denotes that this function should be invoked when a GET HTTP request is sent to <host>/example
     The returned string will then be sent to the requester
      */
+
+    
     @GET
     public String welcome() {
         return "Welcome to Jooby!";
@@ -99,7 +102,7 @@ public class BankController {
         // we must create a model to pass to the "dashboard" template
         Map<String, Object> model = new HashMap<>();
         model.put("name", name);
-
+        
         DatabaseController dbController = new DatabaseController(dataSource);
         model.put("balance", dbController.getBalanceFromName(name));
         model.put("id", dbController.getIdFromName(name));

@@ -1,0 +1,108 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9;
+    color: #333;
+}
+
+header {
+    background-color: #0084ff;
+    color: white;
+    text-align: center;
+    padding: 5px;
+    font-size: 10px;
+}
+
+main {
+    width: 80%;
+    margin: 20px auto;
+    padding: 20px;
+    background: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+h2 {
+    color: #0044cc;
+    border-bottom: 2px solid #0084ff;
+    padding-bottom: 5px;
+}
+
+/* Account Overview & Balance */
+#UserOverview, #balanceOverview {
+    background: #e3e7fc;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+p {
+    font-size: 18px;
+    margin: 5px 0;
+}
+
+/* Transactions */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+thead {
+    background-color: #0084ff;
+    color: white;
+}
+
+th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+
+/* Logout Button */
+
+ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #0084ff;
+  }
+  
+li {
+  float: left;
+}
+
+li a {
+  display: block;
+  color: white;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+li a:hover:not(.active) {
+  background-color: rgba(59, 87, 248, 0.473);
+}
+
+.active {
+  background-color: #2843dab6;
+}
+
+.logout {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    padding: 10px;
+    background: #cc0000;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.logout:hover {
+    background: #990000;
+}

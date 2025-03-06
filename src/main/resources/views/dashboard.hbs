@@ -4,19 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" type="text/css" href="/assets/dashstyles.css">
 </head>
 <body>
     <header>
-        <h1>Welcome to ScotBank Dashboard</h1>
+        <h1>Scotbank</h1>
     </header>
+    <ul>
+        <li><a class="active" href="">Dashboard</a></li>
+        <li><a href="">example</a></li>
+        <li><a href="">example</a></li>
+        <li><a href="">example</a></li>
+    </ul>
+
     <main>
-        <section id="overview">
+        <div id="UserOverview">
             <h2>Account Overview</h2>
             <p>id: {{id}}</p>
             <p>Name: {{name}}</p>
+        </div>
+
+        <div id="balanceOverview">
+            <h2>Account Balance</h2>
             <p>Balance: {{balance}}</p>
-        </section>
+        </div>
 
         <section id="transactions">
             <h2>Transaction History</h2>
@@ -24,23 +35,28 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Amount</th>
                         <th>Date</th>
-                        <th>Description</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Amount</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{#each transactions}}
-                        <tr>
+                        <tr class="transaction-box">
                             <td>{{this.transactionId}}</td>
                             <td>{{this.date}}</td>
+                            <td>{{this.from}}</td>
+                            <td>{{this.to}}</td>
+                            <td>{{this.amount}}</td>
                         </tr>
                     {{/each}}
+                </tbody>
                 </tbody>
             </table>
         </section>
 
-        <a href="/scotbank/login">Logout</a>
+        <a class="logout" href="/scotbank/login">Logout</a>
     </main>
 </body>
 </html>
