@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Signup</title>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
     <header>
-        <h1>Login to ScotBank</h1>
+        <h1>Signup for ScotBank</h1>
     </header>
     <main>
-        <form action="/scotbank/dashboard" method="get">
+        <form action="/scotbank/signup" method="post">
             <label for="name">Name:</label>
             <input type="text" id="name" name="name" placeholder="Enter your name" required>
 
             <label for="password">Password:</label>
             <input type="password" id="password" name="password" placeholder="Enter your password" required>
 
-            <button type="submit">Login</button>
+            <button type="submit">Signup</button>
         </form>
-        <p>Don't have an account? <a href="/scotbank/signup">Signup here</a></p>
+        <p>Already have an account? <a href="/scotbank/login">Login here</a></p>
     </main>
 </body>
 </html>

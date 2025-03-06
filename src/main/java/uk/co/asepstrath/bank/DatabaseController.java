@@ -13,12 +13,16 @@ import java.util.List;
 
 public class DatabaseController {
 
-    private DataSource dataSource;
-    private Logger log;
+    private static Logger log;
 
     public DatabaseController(DataSource dataSource, Logger log) {
         this.dataSource = dataSource;
         this.log = log;
+    }
+    private final DataSource dataSource;
+
+    public DatabaseController(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     public void setupDatabase() {
@@ -85,17 +89,83 @@ public class DatabaseController {
         }
     }
 
-    private void insertTransactions(Connection connection) throws SQLException {
-        String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date) VALUES (?, ?, ?, ?, ?)";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(insertTransactionSql)) {
-            for (Transaction transaction : App.transactions) {
-                preparedStatement.setString(1, transaction.getId());
-                preparedStatement.setString(2, transaction.getFrom());
-                preparedStatement.setString(3, transaction.getTo());
-                preparedStatement.setDouble(4, transaction.getAmount());
-                preparedStatement.setString(5, transaction.getDate());
-                preparedStatement.executeUpdate();
+                private void insertTransactions(Connection connection) throws SQLException {
+                    String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date) VALUES (?, ?, ?, ?, ?)";
+                    try (PreparedStatement preparedStatement = connection.prepareStatement(insertTransactionSql)) {
+                        for (Transaction transaction : App.transactions) {
+                            preparedStatement.setString(1, transaction.getId());
+                            preparedStatement.setString(2, transaction.getFrom());
+                            preparedStatement.setString(3, transaction.getTo());
+                            preparedStatement.setDouble(4, transaction.getAmount());
+                            preparedStatement.setString(5, transaction.getDate());
+                            preparedStatement.executeUpdate();
+                        }
+                    }
+                }
+            
+
+
+    
+    public void addAccount(Account account) {
+        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
+            preparedStatement.setString(1, "1");
+            preparedStatement.setString(2, account.getName());
+            preparedStatement.setDouble(3, account.getBalance().doubleValue());
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            log.error("Error adding account: " + account.getName(), e);
+        }
+    }
+
+    public String getAccountFromName(String accountName) {
+        String query = "SELECT * FROM Accounts WHERE Name = ?";
+        try (Connection connection = dataSource.getConnection();
+         PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+        preparedStatement.setString(1, accountName);
+        try (ResultSet rs = preparedStatement.executeQuery()) {
+            if (rs.next()) {
+                return String.format("ID: %s, Name: %s, Balance: %.2f",
+                        rs.getString("id"), rs.getString("Name"), rs.getDouble("Balance"));
             }
         }
+    } catch (SQLException e) {
+        log.error("Error retrieving account with Name: " + accountName, e);
+    }
+    return null;
+    }
+
+    public String getAccountById(String accountId) {
+        String query = "SELECT * FROM Accounts WHERE id = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, accountId);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return String.format("ID: %s, Name: %s, Balance: %.2f",
+                            rs.getString("id"), rs.getString("Name"), rs.getDouble("Balance"));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving account with ID: " + accountId, e);
+        }
+        return null;
+    }
+
+    public String getBalanceFromName(String accountName) {
+        String query = "SELECT Balance FROM Accounts WHERE Name = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, accountName);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return String.valueOf(rs.getDouble("Balance"));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving account with Name: " + accountName, e);
+        }
+        return null;
     }
 }

@@ -5,6 +5,8 @@ import io.jooby.StatusCode;
 import io.jooby.annotation.*;
 import io.jooby.exception.StatusCodeException;
 import kong.unirest.core.Unirest;
+
+import org.h2.engine.Database;
 import org.slf4j.Logger;
 import uk.co.asepstrath.bank.Account;
 import uk.co.asepstrath.bank.App;
@@ -59,54 +61,19 @@ public class BankController {
         }
 
         return output.toString();
-        }
+    }
 
     @GET("/transactions")
     public String listTransactions() {
-    StringBuilder output = new StringBuilder();
-    output.append("Transaction List");
-    output.append("\n");
+        StringBuilder output = new StringBuilder();
+        output.append("Transaction List");
+        output.append("\n");
 
-    for (Transaction transaction : App.transactions) {
-        output.append(transaction.toString()).append("\n");
-    }
-
-    return output.toString();
-    }
-
-    /*
-    This @Get annotation takes an optional path parameter which denotes the function should be invoked on GET <host>/example/hello
-    Note that this function makes it's own request to another API (http://faker.hook.io/) and returns the response
-     */
-    @GET("/hello")
-    public String sayHi() {
-        return "Hello " + Unirest.get("http://faker.hook.io/").asString().getBody();
-    }
-
-    /*
-    This request makes a call to the passed in data source (The Database) which has been set up in App.java
-     */
-    @GET("/welcome")
-    public String welcomeFromDB() {
-        String welcomeMessageKey = "WelcomeMessage";
-        // Create a connection
-        try (Connection connection = dataSource.getConnection()) {
-            // Create Statement (batch of SQL Commands)
-            Statement statement = connection.createStatement();
-            // Perform SQL Query
-            ResultSet set = statement.executeQuery("SELECT * FROM `Example` Where `Key` = '"+welcomeMessageKey+"'");
-            // Read First Result
-            set.next();
-            // Extract value from Result
-            String welcomeMessage = set.getString("Value");
-            // Return value
-            return welcomeMessage;
-        } catch (SQLException e) {
-            // If something does go wrong this will log the stack trace
-            logger.error("Database Error Occurred",e);
-            // And return a HTTP 500 error to the requester
-            throw new StatusCodeException(StatusCode.SERVER_ERROR, "Database Error Occurred");
+        for (Transaction transaction : App.transactions) {
+            output.append(transaction.toString()).append("\n");
         }
+
+        return output.toString();
     }
 
     @GET("/login")
@@ -119,51 +86,48 @@ public class BankController {
             name = name + "'s";
         }
 
-        // we must create a model to pass to the "dice" template
+        // we must create a model to pass to the "login" template
         Map<String, Object> model = new HashMap<>();
-        model.put("random", new Random().nextInt(6));
         model.put("name", name);
 
         return new ModelAndView("login.hbs", model);
-
     }
 
-    /*
-    The dice endpoint displays two features of the Jooby framework, Parameters and Templates
+    @GET("/dashboard")
+    public ModelAndView dashboard(@QueryParam String name) {
+        // we must create a model to pass to the "dashboard" template
+        Map<String, Object> model = new HashMap<>();
+        model.put("name", name);
+        DatabaseController dbController = new DatabaseController(dataSource);
+        model.put("balance", dbController.getBalanceFromName(name));
 
-    You can see that this function takes in a String name, the annotation @QueryParam tells the framework that
-    the value of name should come from the URL Query String (<host>/example/dice?name=<value>)
+        return new ModelAndView("dashboard.hbs", model);
+    }
 
-    The function then uses this value and others to create a Map of values to be injected into a template.
-    The ModelAndView constructor takes a template name and the model.
-    The Template name is the name of the file containing the template, this name is relative to the folder src/main/resources/views
+    @GET("/signup")
+    public ModelAndView signup() {
+        Map<String, Object> model = new HashMap<>();
+        return new ModelAndView("signup.hbs",model);
+    }
 
-    We have set the Jooby framework up to use the Handlebars templating system which you can read more on here:
-    https://handlebarsjs.com/guide/
-     */
-    @GET("/dice")
-    public ModelAndView dice(@QueryParam String name) {
-
-        // If no name has been sent within the query URL
-        if (name == null) {
-            name = "Your";
-        } else {
-            name = name + "'s";
+    @POST("/signup")
+    public ModelAndView handleSignup(@FormParam String name, @FormParam String password) {
+        if (name == null || password == null || name.isEmpty() || password.isEmpty()) {
+            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Name and password are required.");
         }
 
-        // we must create a model to pass to the "dice" template
+        // Create new account (for simplicity, starting balance is 0)
+        Account newAccount = new Account(name, 0.0);
+
+        // Add account to the database
+        DatabaseController dbController = new DatabaseController(dataSource, logger);
+        dbController.addAccount(newAccount);
+
+        // Redirect to login page
         Map<String, Object> model = new HashMap<>();
-        model.put("random", new Random().nextInt(6));
-        model.put("name", name);
-
-        return new ModelAndView("dice.hbs", model);
-
+        model.put("message", "Account created successfully! You can now log in.");
+        return new ModelAndView("login.hbs", model);
     }
-
-    /*
-    The @POST annotation registers this function as a HTTP POST handler.
-    It will look at the body of the POST request and try to deserialise into a MyMessage object
-     */
 
 }
 
