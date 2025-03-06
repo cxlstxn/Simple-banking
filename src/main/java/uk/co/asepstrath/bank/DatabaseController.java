@@ -34,6 +34,9 @@ public class DatabaseController {
             // Insert accounts into the database
             insertAccounts(connection);
 
+            // Insert businesses into the database
+            insertBusinesses(connection);
+
             // Insert transactions into the database
             insertTransactions(connection);
 
@@ -47,6 +50,32 @@ public class DatabaseController {
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255))");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255) PRIMARY KEY, `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
+    }
+
+    private void insertBusinesses(Connection connection) throws SQLException {
+        List<List<String>> data = new ArrayList<>();
+        String file = "src/main/resources/data/businesses.csv";
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                List<String> lineData = Arrays.asList(line.split(","));
+                data.add(lineData);
+            }
+        } catch (IOException e) {
+            log.error("Error reading businesses CSV file", e);
+            throw new RuntimeException(e);
+        }
+
+        String insertBusinessSql = "INSERT INTO Businesses (id, Name, Category, Sanctioned) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(insertBusinessSql)) {
+            for (List<String> list : data) {
+                preparedStatement.setString(1, list.get(0));
+                preparedStatement.setString(2, list.get(1));
+                preparedStatement.setString(3, list.get(2));
+                preparedStatement.setString(4, list.get(3));
+                preparedStatement.executeUpdate();
+            }
+        }
     }
 
     private void insertAccounts(Connection connection) throws SQLException {
