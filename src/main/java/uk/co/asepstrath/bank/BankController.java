@@ -19,6 +19,7 @@ import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 
 /*
@@ -98,8 +99,12 @@ public class BankController {
         // we must create a model to pass to the "dashboard" template
         Map<String, Object> model = new HashMap<>();
         model.put("name", name);
+        
         DatabaseController dbController = new DatabaseController(dataSource);
         model.put("balance", dbController.getBalanceFromName(name));
+        model.put("id", dbController.getIdFromName(name));
+        UUID id = dbController.getIdFromName(name);
+        model.put("transactions", dbController.getTransactionsById(id));
 
         return new ModelAndView("dashboard.hbs", model);
     }
@@ -117,7 +122,7 @@ public class BankController {
         }
 
         // Create new account (for simplicity, starting balance is 0)
-        Account newAccount = new Account(name, 0.0);
+        Account newAccount = new Account(UUID.randomUUID(),name, 0.0);
 
         // Add account to the database
         DatabaseController dbController = new DatabaseController(dataSource, logger);
@@ -125,7 +130,6 @@ public class BankController {
 
         // Redirect to login page
         Map<String, Object> model = new HashMap<>();
-        model.put("message", "Account created successfully! You can now log in.");
         return new ModelAndView("login.hbs", model);
     }
 

@@ -13,9 +13,23 @@
     <main>
         <section id="overview">
             <h2>Account Overview</h2>
+            <p>id: {{id}}</p>
             <p>Name: {{name}}</p>
             <p>Balance: {{balance}}</p>
         </section>
+
+        <section id="TransactionOverview">
+            <h2>Transaction Overview</h2>
+            {{#each transactions}}
+            <div class="transaction">
+                <p>Date: {{this.date}}</p>
+                <p>Amount: {{this.amount}}</p>
+                <p>To: {{this.to}}</p>
+                <p>Type: {{this.type}}</p>
+            </div>
+            {{/each}}
+        </section>
+
         <a href="/scotbank/login">Logout</a>
     </main>
 </body>

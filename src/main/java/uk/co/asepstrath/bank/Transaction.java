@@ -1,14 +1,17 @@
 package uk.co.asepstrath.bank;
 
+import java.util.UUID;
+
+
 public class Transaction {
-    private String transactionId;
+    private UUID transactionId;
     private double amount;
     private String date;
     private String from;
     private String to;
     private String type;
 
-    public Transaction(String transactionId, double amount, String date, String from, String to, String type) {
+    public Transaction(UUID transactionId, double amount, String date, String from, String to, String type) {
         this.transactionId = transactionId;
         this.amount = amount;
         this.date = date;
@@ -17,11 +20,11 @@ public class Transaction {
         this.type = type;
     }
 
-    public String getTransactionId() {
+    public UUID getTransactionId() {
         return transactionId;
     }
 
-    public void setTransactionId(String transactionId) {
+    public void setTransactionId(UUID transactionId) {
         this.transactionId = transactionId;
     }
 
@@ -65,13 +68,8 @@ public class Transaction {
         this.type = type;
     }
 
-    public String getId() {
-        return transactionId;
-    }
-
     @Override
     public String toString() {
         return "Transaction ID: " + transactionId + " | Amount: " + amount + " | Date: " + date + " | From: " + from + " | To: " + to + " | Type: " + type;
     }
 }
-

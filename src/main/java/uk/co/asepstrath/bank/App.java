@@ -20,7 +20,6 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.sql.Connection;
 import java.util.*;
-
 import java.net.HttpURLConnection;
 import java.net.URL;
 import javax.json.Json;
@@ -103,7 +102,8 @@ public class App extends Jooby {
             jsonReader.close();
 
             for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
-                accounts.add(new Account(jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue()));
+                UUID id = UUID.fromString(jsonObject.getString("id"));
+                accounts.add(new Account(id, jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue()));
             }
 
         } catch (IOException e) {
@@ -112,78 +112,75 @@ public class App extends Jooby {
 
         try {
             for (int i = 0; i < 154; i++) {
-                // URL of the API
-                String urlString = "https://api.asep-strath.co.uk/api/transactions?page=" + i;
-                URL url = new URL(urlString);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
 
-                // Read the response body
-                String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
-                log.info("Response Body: " + responseBody); // Log the raw XML response
+            // URL of the API
+            String urlString = "https://api.asep-strath.co.uk/api/transactions?page=" + i;
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
 
-                // Parse the XML
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = factory.newDocumentBuilder();
-                Document document = builder.parse(new InputSource(new StringReader(responseBody)));
+            // Read the response body
+            String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
 
-                // Normalize the XML structure
-                document.getDocumentElement().normalize();
+            // Parse the XML
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.parse(new InputSource(new StringReader(responseBody)));
 
-                // Get the root <pageResult> element
-                Element pageResult = document.getDocumentElement();
+            // Normalize the XML structure
+            document.getDocumentElement().normalize();
 
-                // Get all <results> elements under <pageResult>
-                NodeList resultsList = pageResult.getElementsByTagName("results");
-                if (resultsList.getLength() == 0) {
-                    log.warn("No <results> elements found in the XML response for page " + i);
-                    continue; // Skip to the next page
-                }
+            // Get the root <pageResult> element
+            Element pageResult = document.getDocumentElement();
 
-                // Iterate through <results> elements
-                for (int x = 0; x < resultsList.getLength(); x++) {
-                    Node node = resultsList.item(x);
+            // Get all <results> elements under <pageResult>
+            NodeList resultsList = pageResult.getElementsByTagName("results");
+            if (resultsList.getLength() == 0) {
+                continue; // Skip to the next page
+            }
 
-                    // Check if the <results> element has the correct type
-                    if (node.getNodeType() == Node.ELEMENT_NODE) {
-                        Element element = (Element) node;
+            // Iterate through <results> elements
+            for (int x = 0; x < resultsList.getLength(); x++) {
+                Node node = resultsList.item(x);
 
-                        // Check if the xsi:type attribute is "transactionModel"
-                        String typeAttribute = element.getAttribute("xsi:type");
-                        if ("transactionModel".equals(typeAttribute)) {
-                            // Extract transaction data with null checks
-                            Node idNode = element.getElementsByTagName("id").item(0);
-                            Node fromNode = element.getElementsByTagName("from").item(0);
-                            Node toNode = element.getElementsByTagName("to").item(0);
-                            Node amountNode = element.getElementsByTagName("amount").item(0);
-                            Node timestampNode = element.getElementsByTagName("timestamp").item(0);
-                            Node typeNode = element.getElementsByTagName("type").item(0);
+                // Check if the <results> element has the correct type
+                if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) node;
 
-                            // Check if all required fields are present
-                            if (idNode == null || fromNode == null || toNode == null ||
-                                    amountNode == null || timestampNode == null || typeNode == null) {
-                                log.warn("Missing required fields in <results> element. Skipping this transaction.");
-                                continue; // Skip this transaction
-                            }
+                // Check if the xsi:type attribute is "transactionModel"
+                String typeAttribute = element.getAttribute("xsi:type");
+                if ("transactionModel".equals(typeAttribute)) {
+                    try {
+                    // Extract transaction data with null checks
+                    Node idNode = element.getElementsByTagName("id").item(0);
+                    Node fromNode = element.getElementsByTagName("from").item(0);
+                    Node toNode = element.getElementsByTagName("to").item(0);
+                    Node amountNode = element.getElementsByTagName("amount").item(0);
+                    Node timestampNode = element.getElementsByTagName("timestamp").item(0);
+                    Node typeNode = element.getElementsByTagName("type").item(0);
 
-                            // Get text content of each field
-                            String id = idNode.getTextContent();
-                            String from = fromNode.getTextContent();
-                            String to = toNode.getTextContent();
-                            double amount = Double.parseDouble(amountNode.getTextContent());
-                            String date = timestampNode.getTextContent();
-                            String type = typeNode.getTextContent();
+                    // Get text content of each field
+                    UUID id = UUID.fromString(idNode.getTextContent());
+                    String from = fromNode != null ? fromNode.getTextContent() : null;
+                    String to = toNode != null ? toNode.getTextContent() : null;
+                    double amount = Double.parseDouble(amountNode.getTextContent());
+                    String date = timestampNode.getTextContent();
+                    String type = typeNode.getTextContent();
 
-                            // Add transaction to the list
-                            transactions.add(new Transaction(id, amount, date, from, to, type));
-                        }
+                    // Add transaction to the list
+                    transactions.add(new Transaction(id, amount, date, from, to, type));
+                    } catch (Exception e) {
+                    System.err.println("Error processing transaction on page " + i + ": " + e.getMessage());
                     }
                 }
+                }
+            }
             }
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("Error parsing XML: ", e);
+            System.err.println("Error parsing XML: " + e.getMessage());
         }
+
 
         // Fetch DB Source
         DataSource ds = require(DataSource.class);
