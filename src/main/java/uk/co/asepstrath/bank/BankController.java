@@ -99,13 +99,12 @@ public class BankController {
         // we must create a model to pass to the "dashboard" template
         Map<String, Object> model = new HashMap<>();
         model.put("name", name);
-        
+
         DatabaseController dbController = new DatabaseController(dataSource);
         model.put("balance", dbController.getBalanceFromName(name));
         model.put("id", dbController.getIdFromName(name));
         UUID id = dbController.getIdFromName(name);
         model.put("transactions", dbController.getTransactionsById(id));
-
         return new ModelAndView("dashboard.hbs", model);
     }
 
@@ -121,13 +120,12 @@ public class BankController {
             throw new StatusCodeException(StatusCode.BAD_REQUEST, "Name and password are required.");
         }
 
-        // Create new account (for simplicity, starting balance is 0)
-        Account newAccount = new Account(UUID.randomUUID(),name, 0.0);
-
-        // Add account to the database
+        
         DatabaseController dbController = new DatabaseController(dataSource, logger);
-        dbController.addAccount(newAccount);
-
+        UUID id = UUID.randomUUID();
+        dbController.createUser(name, password, id);
+        dbController.addAccount(new Account(id, name, 0));
+        
         // Redirect to login page
         Map<String, Object> model = new HashMap<>();
         return new ModelAndView("login.hbs", model);

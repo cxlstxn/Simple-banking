@@ -50,6 +50,7 @@ public class DatabaseController {
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255))");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255) PRIMARY KEY, `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
+        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
     }
 
     private void insertBusinesses(Connection connection) throws SQLException {
@@ -108,7 +109,7 @@ public class DatabaseController {
         String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
-            preparedStatement.setObject(1, UUID.randomUUID());
+            preparedStatement.setObject(1, account.getId());
             preparedStatement.setString(2, account.getName());
             preparedStatement.setDouble(3, account.getBalance().doubleValue());
             preparedStatement.executeUpdate();
@@ -177,8 +178,8 @@ public class DatabaseController {
         String query = "SELECT id, `From`, `To`, Amount, Date FROM Transactions WHERE `From` = ? OR `To` = ?";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setObject(1, id);
-            preparedStatement.setObject(2, id);
+            preparedStatement.setString(1, id.toString());
+            preparedStatement.setObject(2, id.toString());
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 while (rs.next()) {
                     UUID transactionId = UUID.fromString(rs.getString("id"));
@@ -193,6 +194,21 @@ public class DatabaseController {
             log.error("Error retrieving transactions for account with ID: " + id, e);
         }
         return transactions;
+    }
+
+    public void createUser(String name, String password, UUID account) {
+        String insertUserSql = "INSERT INTO Users (id, Name, Password, Role, Account) VALUES (?, ?, ?, ?, ?)";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(insertUserSql)) {
+            preparedStatement.setObject(1, UUID.randomUUID());
+            preparedStatement.setString(2, name);
+            preparedStatement.setString(3, password);
+            preparedStatement.setString(4, "user");
+            preparedStatement.setObject(5, account);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            log.error("Error adding user: " + name, e);
+        }
     }
 
 }
