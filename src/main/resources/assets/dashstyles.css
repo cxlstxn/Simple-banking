@@ -106,3 +106,47 @@ li a:hover:not(.active) {
 .logout:hover {
     background: #990000;
 }
+
+#transfer {
+    background: #e3e7fc;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+#transfer h2 {
+    color: #0044cc;
+    border-bottom: 2px solid #0084ff;
+    padding-bottom: 5px;
+}
+
+#transfer label {
+    display: block;
+    margin: 10px 0 5px;
+    font-weight: bold;
+}
+
+#transfer input[type="text"],
+#transfer input[type="number"] {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#transfer button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#transfer button:hover {
+    background-color: #005bb5;
+}
+

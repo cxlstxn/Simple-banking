@@ -103,7 +103,7 @@ public class BankController {
         Map<String, Object> model = new HashMap<>();
         DatabaseController dbController = new DatabaseController(dataSource);
         UUID accountID = dbController.getIDfromEmail(email);
-        
+        model.put("email", email);
         model.put("name", dbController.getNamefromID(accountID));
         model.put("balance", dbController.getBalanceFromID(accountID));
         model.put("id", accountID);
@@ -111,10 +111,59 @@ public class BankController {
         return new ModelAndView("dashboard.hbs", model);
     }
 
+    @GET("/transfer")
+    public ModelAndView transfer(@QueryParam String email) {
+        // we must create a model to pass to the "dashboard" template
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+        UUID accountID = dbController.getIDfromEmail(email);
+
+        model.put("name", dbController.getNamefromID(accountID));
+        model.put("balance", dbController.getBalanceFromID(accountID));
+        model.put("id", accountID);
+        model.put("email", email);
+        return new ModelAndView("transfer.hbs", model);
+        }
+
+    @POST("/transfer")
+    public ModelAndView handleTransfer(@FormParam String email, @FormParam String to, @FormParam double amount) {
+    if (email == null || to == null || amount <= 0) {
+        throw new StatusCodeException(StatusCode.BAD_REQUEST, "Invalid transfer details.");
+    }
+
+    DatabaseController dbController = new DatabaseController(dataSource);
+    UUID fromAccountID = dbController.getIDfromEmail(email);
+    UUID toAccountID = UUID.fromString(to);
+
+    if (fromAccountID == null || toAccountID == null) {
+        throw new StatusCodeException(StatusCode.BAD_REQUEST, "Invalid account details.");
+    }
+
+    if (fromAccountID.equals(toAccountID)) {
+        throw new StatusCodeException(StatusCode.BAD_REQUEST, "Cannot transfer to the same account.");
+    }
+
+    if (Double.parseDouble(dbController.getBalanceFromID(fromAccountID)) < amount){
+        throw new StatusCodeException(StatusCode.BAD_REQUEST, "Insufficient funds.");
+    }
+
+
+    dbController.transferFunds(fromAccountID, toAccountID, amount);
+
+    Map<String, Object> model = new HashMap<>();
+    model.put("email", email);
+    model.put("name", dbController.getNamefromID(fromAccountID));
+    model.put("balance", dbController.getBalanceFromID(fromAccountID));
+    model.put("id", fromAccountID);
+    model.put("transactions", dbController.getTransactionsById(fromAccountID));
+
+    return new ModelAndView("dashboard.hbs", model);
+    }
+
     @GET("/signup")
     public ModelAndView signup() {
-        Map<String, Object> model = new HashMap<>();
-        return new ModelAndView("signup.hbs",model);
+    Map<String, Object> model = new HashMap<>();
+    return new ModelAndView("signup.hbs",model);
     }
 
     @POST("/signup")

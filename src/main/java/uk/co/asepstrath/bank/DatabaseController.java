@@ -264,6 +264,47 @@ public class DatabaseController {
         return null;
     }
 
+    public void transferFunds(UUID fromAccountId, UUID toAccountId, double amount) {
+        String withdrawSql = "UPDATE Accounts SET Balance = Balance - ? WHERE id = ?";
+        String depositSql = "UPDATE Accounts SET Balance = Balance + ? WHERE id = ?";
+        String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date) VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement withdrawStmt = connection.prepareStatement(withdrawSql);
+                 PreparedStatement depositStmt = connection.prepareStatement(depositSql);
+                 PreparedStatement transactionStmt = connection.prepareStatement(insertTransactionSql)) {
+
+                // Withdraw from the source account
+                withdrawStmt.setDouble(1, amount);
+                withdrawStmt.setObject(2, fromAccountId);
+                withdrawStmt.executeUpdate();
+
+                // Deposit to the destination account
+                depositStmt.setDouble(1, amount);
+                depositStmt.setObject(2, toAccountId);
+                depositStmt.executeUpdate();
+
+                // Record the transaction
+                transactionStmt.setObject(1, UUID.randomUUID());
+                transactionStmt.setObject(2, fromAccountId);
+                transactionStmt.setObject(3, toAccountId);
+                transactionStmt.setDouble(4, amount);
+                transactionStmt.setString(5, new java.util.Date().toString());
+                transactionStmt.executeUpdate();
+
+                connection.commit();
+            } catch (SQLException e) {
+                connection.rollback();
+                log.error("Error transferring funds from account " + fromAccountId + " to account " + toAccountId, e);
+            }
+        } catch (SQLException e) {
+            log.error("Database connection error during fund transfer", e);
+        }
+    }
+
+
 
 
 }

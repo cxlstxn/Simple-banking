@@ -13,7 +13,10 @@ import io.jooby.handlebars.HandlebarsModule;
 import io.jooby.helper.UniRestExtension;
 import io.jooby.hikari.HikariModule;
 import org.slf4j.Logger;
-
+import io.jooby.Jooby;
+import io.jooby.Session;
+import io.jooby.SessionStore;
+import io.jooby.handlebars.HandlebarsModule;
 import javax.sql.DataSource;
 import java.io.*;
 import java.net.MalformedURLException;
@@ -42,7 +45,7 @@ public class App extends Jooby {
         install(new UniRestExtension());
         install(new HandlebarsModule());
         install(new HikariModule("mem"));
-
+        
         /*
         This will host any files in src/main/resources/assets on <host>/assets
         For example in the dice template (dice.hbs) it references "assets/dice.png" which is in resources/assets folder
@@ -188,6 +191,9 @@ public class App extends Jooby {
         // Create Database Controller and setup the database
         DatabaseController dbController = new DatabaseController(ds, log);
         dbController.setupDatabase();
+
+        // creating test user connected to already existing account from api
+        dbController.createUser("test@scotbank.com", "Melva Rogahn", "test", UUID.fromString("04f6ab33-8208-4234-aabd-b6a8be8493da"));
     }
 
     /*
