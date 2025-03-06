@@ -111,51 +111,76 @@ public class App extends Jooby {
         }
 
         try {
-            // URL of the API
-            String urlString = "https://api.asep-strath.co.uk/api/transactions";
-            URL url = new URL(urlString);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
+            for (int i = 0; i < 154; i++) {
+                // URL of the API
+                String urlString = "https://api.asep-strath.co.uk/api/transactions?page=" + i;
+                URL url = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
 
-            String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
+                // Read the response body
+                String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
+                log.info("Response Body: " + responseBody); // Log the raw XML response
 
-            // Parse the XML
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            Document document = builder.parse(new InputSource(new StringReader(responseBody)));
+                // Parse the XML
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder builder = factory.newDocumentBuilder();
+                Document document = builder.parse(new InputSource(new StringReader(responseBody)));
 
-            // Normalize the XML structure
-            document.getDocumentElement().normalize();
+                // Normalize the XML structure
+                document.getDocumentElement().normalize();
 
-            // Get all <results> elements
-            NodeList resultsList = document.getElementsByTagName("results");
+                // Get the root <pageResult> element
+                Element pageResult = document.getDocumentElement();
 
-            // Iterate through <results> elements
-            for (int i = 0; i < resultsList.getLength(); i++) {
-                Node node = resultsList.item(i);
+                // Get all <results> elements under <pageResult>
+                NodeList resultsList = pageResult.getElementsByTagName("results");
+                if (resultsList.getLength() == 0) {
+                    log.warn("No <results> elements found in the XML response for page " + i);
+                    continue; // Skip to the next page
+                }
 
-                // Check if the <results> element has the correct type
-                if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    Element element = (Element) node;
+                // Iterate through <results> elements
+                for (int x = 0; x < resultsList.getLength(); x++) {
+                    Node node = resultsList.item(x);
 
-                    // Check if the xsi:type attribute is "transactionModel"
-                    String typeAttribute = element.getAttribute("xsi:type");
-                    if ("transactionModel".equals(typeAttribute)) {
-                        // Extract transaction data
-                        String id = element.getElementsByTagName("id").item(0).getTextContent();
-                        String from = element.getElementsByTagName("from").item(0).getTextContent();
-                        String to = element.getElementsByTagName("to").item(0).getTextContent();
-                        double amount = Double.parseDouble(element.getElementsByTagName("amount").item(0).getTextContent());
-                        String date = element.getElementsByTagName("timestamp").item(0).getTextContent(); // Use "timestamp" instead of "date"
-                        String type = element.getElementsByTagName("type").item(0).getTextContent();
+                    // Check if the <results> element has the correct type
+                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                        Element element = (Element) node;
 
-                        // Add transaction to the list
-                        transactions.add(new Transaction(id, amount, date, from, to, type));
+                        // Check if the xsi:type attribute is "transactionModel"
+                        String typeAttribute = element.getAttribute("xsi:type");
+                        if ("transactionModel".equals(typeAttribute)) {
+                            // Extract transaction data with null checks
+                            Node idNode = element.getElementsByTagName("id").item(0);
+                            Node fromNode = element.getElementsByTagName("from").item(0);
+                            Node toNode = element.getElementsByTagName("to").item(0);
+                            Node amountNode = element.getElementsByTagName("amount").item(0);
+                            Node timestampNode = element.getElementsByTagName("timestamp").item(0);
+                            Node typeNode = element.getElementsByTagName("type").item(0);
+
+                            // Check if all required fields are present
+                            if (idNode == null || fromNode == null || toNode == null ||
+                                    amountNode == null || timestampNode == null || typeNode == null) {
+                                log.warn("Missing required fields in <results> element. Skipping this transaction.");
+                                continue; // Skip this transaction
+                            }
+
+                            // Get text content of each field
+                            String id = idNode.getTextContent();
+                            String from = fromNode.getTextContent();
+                            String to = toNode.getTextContent();
+                            double amount = Double.parseDouble(amountNode.getTextContent());
+                            String date = timestampNode.getTextContent();
+                            String type = typeNode.getTextContent();
+
+                            // Add transaction to the list
+                            transactions.add(new Transaction(id, amount, date, from, to, type));
+                        }
                     }
                 }
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             log.error("Error parsing XML: ", e);
         }
