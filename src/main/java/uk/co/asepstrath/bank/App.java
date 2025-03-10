@@ -13,14 +13,16 @@ import io.jooby.handlebars.HandlebarsModule;
 import io.jooby.helper.UniRestExtension;
 import io.jooby.hikari.HikariModule;
 import org.slf4j.Logger;
-
+import io.jooby.Jooby;
+import io.jooby.Session;
+import io.jooby.SessionStore;
+import io.jooby.handlebars.HandlebarsModule;
 import javax.sql.DataSource;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.sql.Connection;
 import java.util.*;
-
 import java.net.HttpURLConnection;
 import java.net.URL;
 import javax.json.Json;
@@ -43,7 +45,7 @@ public class App extends Jooby {
         install(new UniRestExtension());
         install(new HandlebarsModule());
         install(new HikariModule("mem"));
-
+        
         /*
         This will host any files in src/main/resources/assets on <host>/assets
         For example in the dice template (dice.hbs) it references "assets/dice.png" which is in resources/assets folder
@@ -103,7 +105,8 @@ public class App extends Jooby {
             jsonReader.close();
 
             for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
-                accounts.add(new Account(jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue()));
+                UUID id = UUID.fromString(jsonObject.getString("id"));
+                accounts.add(new Account(id, jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue()));
             }
 
         } catch (IOException e) {
@@ -111,12 +114,15 @@ public class App extends Jooby {
         }
 
         try {
+            for (int i = 0; i < 154; i++) {
+
             // URL of the API
-            String urlString = "https://api.asep-strath.co.uk/api/transactions";
+            String urlString = "https://api.asep-strath.co.uk/api/transactions?page=" + i;
             URL url = new URL(urlString);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
 
+            // Read the response body
             String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
 
             // Parse the XML
@@ -127,38 +133,57 @@ public class App extends Jooby {
             // Normalize the XML structure
             document.getDocumentElement().normalize();
 
-            // Get all <results> elements
-            NodeList resultsList = document.getElementsByTagName("results");
+            // Get the root <pageResult> element
+            Element pageResult = document.getDocumentElement();
+
+            // Get all <results> elements under <pageResult>
+            NodeList resultsList = pageResult.getElementsByTagName("results");
+            if (resultsList.getLength() == 0) {
+                continue; // Skip to the next page
+            }
 
             // Iterate through <results> elements
-            for (int i = 0; i < resultsList.getLength(); i++) {
-                Node node = resultsList.item(i);
+            for (int x = 0; x < resultsList.getLength(); x++) {
+                Node node = resultsList.item(x);
 
                 // Check if the <results> element has the correct type
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    Element element = (Element) node;
+                Element element = (Element) node;
 
-                    // Check if the xsi:type attribute is "transactionModel"
-                    String typeAttribute = element.getAttribute("xsi:type");
-                    if ("transactionModel".equals(typeAttribute)) {
-                        // Extract transaction data
-                        String id = element.getElementsByTagName("id").item(0).getTextContent();
-                        String from = element.getElementsByTagName("from").item(0).getTextContent();
-                        String to = element.getElementsByTagName("to").item(0).getTextContent();
-                        double amount = Double.parseDouble(element.getElementsByTagName("amount").item(0).getTextContent());
-                        String date = element.getElementsByTagName("timestamp").item(0).getTextContent(); // Use "timestamp" instead of "date"
-                        String type = element.getElementsByTagName("type").item(0).getTextContent();
+                // Check if the xsi:type attribute is "transactionModel"
+                String typeAttribute = element.getAttribute("xsi:type");
+                if ("transactionModel".equals(typeAttribute)) {
+                    try {
+                    // Extract transaction data with null checks
+                    Node idNode = element.getElementsByTagName("id").item(0);
+                    Node fromNode = element.getElementsByTagName("from").item(0);
+                    Node toNode = element.getElementsByTagName("to").item(0);
+                    Node amountNode = element.getElementsByTagName("amount").item(0);
+                    Node timestampNode = element.getElementsByTagName("timestamp").item(0);
+                    Node typeNode = element.getElementsByTagName("type").item(0);
 
-                        // Add transaction to the list
-                        transactions.add(new Transaction(id, amount, date, from, to, type));
+                    // Get text content of each field
+                    UUID id = UUID.fromString(idNode.getTextContent());
+                    String from = fromNode != null ? fromNode.getTextContent() : null;
+                    String to = toNode != null ? toNode.getTextContent() : null;
+                    double amount = Double.parseDouble(amountNode.getTextContent());
+                    String date = timestampNode.getTextContent();
+                    String type = typeNode.getTextContent();
+
+                    // Add transaction to the list
+                    transactions.add(new Transaction(id, amount, date, from, to, type));
+                    } catch (Exception e) {
+                    System.err.println("Error processing transaction on page " + i + ": " + e.getMessage());
                     }
                 }
+                }
             }
-        }
-        catch (Exception e) {
+            }
+        } catch (Exception e) {
             e.printStackTrace();
-            log.error("Error parsing XML: ", e);
+            System.err.println("Error parsing XML: " + e.getMessage());
         }
+
 
         // Fetch DB Source
         DataSource ds = require(DataSource.class);
@@ -166,6 +191,9 @@ public class App extends Jooby {
         // Create Database Controller and setup the database
         DatabaseController dbController = new DatabaseController(ds, log);
         dbController.setupDatabase();
+
+        // creating test user connected to already existing account from api
+        dbController.createUser("test@scotbank.com", "Melva Rogahn", "test", UUID.fromString("04f6ab33-8208-4234-aabd-b6a8be8493da"));
     }
 
     /*

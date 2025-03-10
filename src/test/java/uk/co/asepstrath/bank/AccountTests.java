@@ -13,7 +13,7 @@ public class AccountTests {
 
 
         Account a = new Account(UUID.randomUUID(), "TestCreateAccount", 0, false);
-        Account b = new Account("TestCreateAccount");
+        Account b = new Account(null, "TestCreateAccount", 0);
         Assertions.assertNotNull(a);
         Assertions.assertNotNull(b);
 
@@ -21,7 +21,7 @@ public class AccountTests {
 
     @Test   // Balance when a new account is created should be 0
     public void checkInitialBalance(){
-        Account a = new Account("TestCheckInitialBalance"); // when a new account is created then the name only needs to be inputted
+        Account a = new Account(null, "TestCheckInitialBalance", 0); // when a new account is created then the name only needs to be inputted
         Assertions.assertEquals(BigDecimal.valueOf(0.0), a.getBalance());
     }
 

@@ -16,15 +16,8 @@ public class Account {
         this.roundUpEnabled = roundUpEnabled;
     }
 
-    public Account(String name) { // This is for creating a new account
-        this(UUID.randomUUID(), name, 0, false);
-    }
-
-    /* This may be useful if a customer wants to create an account and already wants to put money in it
-       Commented out as a customer can currently create an account and just then deposit initial amount
-*/
-    public Account(String name, double balance) {
-        this(UUID.randomUUID(), name, balance, false);
+    public Account(UUID id,String name, double balance) {
+        this(id, name, balance, false);
     }
 
 
