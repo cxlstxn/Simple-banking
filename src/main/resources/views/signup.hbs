@@ -4,27 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Signup</title>
-    <link rel="stylesheet" href="/assets/views/dashstyles.css">
+    <link rel="stylesheet" type="text/css" href="/assets/dashstyles.css">
 </head>
 <body>
-    <header>
-        <h1>Signup for ScotBank</h1>
-    </header>
-    <main>
-        <form action="/scotbank/signup" method="post">
+<header>
+    <h1>ScotBank</h1>
+</header>
 
-            <label for="Email">Email:</label>
-            <input type="email" id="email" name="email" placeholder="Enter your email" required>
+<main>
+
+    <section id="transfer">
+        <h2>Signup</h2>
+        <form action="/scotbank/signup" method="post">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" placeholder="Enter your email" required style="margin-bottom: 15px;">
 
             <label for="name">Name:</label>
-            <input type="text" id="name" name="name" placeholder="Enter your name" required>
+            <input type="email" id="name" name="name" placeholder="Enter your name" required style="margin-bottom: 15px;">
 
             <label for="password">Password:</label>
-            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required style="margin-bottom: 15px;">
 
             <button type="submit">Signup</button>
         </form>
         <p>Already have an account? <a href="/scotbank/login">Login here</a></p>
-    </main>
+    </section>
+</main>
 </body>
 </html>
