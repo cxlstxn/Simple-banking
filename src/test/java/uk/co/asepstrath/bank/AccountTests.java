@@ -10,10 +10,13 @@ public class AccountTests {
 
     @Test
     public void createAccount(){
+
+
         Account a = new Account(UUID.randomUUID(), "TestCreateAccount", 0, false);
         Account b = new Account(null, "TestCreateAccount", 0);
         Assertions.assertNotNull(a);
         Assertions.assertNotNull(b);
+
     }
 
     @Test   // Balance when a new account is created should be 0
