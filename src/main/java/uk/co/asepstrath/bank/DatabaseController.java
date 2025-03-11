@@ -1,5 +1,6 @@
 package uk.co.asepstrath.bank;
 
+import org.mindrot.jbcrypt.BCrypt;
 import org.slf4j.Logger;
 
 import javax.sql.DataSource;
@@ -302,6 +303,14 @@ public class DatabaseController {
         } catch (SQLException e) {
             log.error("Database connection error during fund transfer", e);
         }
+    }
+
+    public String encryptPassword(String unencryptedPassword){
+        return BCrypt.hashpw(unencryptedPassword, BCrypt.gensalt());
+    }
+
+    public boolean verifyPassword(String enteredPassword, String encryptedPassword){
+        return BCrypt.checkpw(enteredPassword, encryptedPassword);
     }
 
 
