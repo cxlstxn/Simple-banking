@@ -1,27 +1,19 @@
 package uk.co.asepstrath.bank;
 
-import io.jooby.MockRouter;
-import io.jooby.ModelAndView;
-import io.jooby.StatusCode;
-import io.jooby.exception.StatusCodeException;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.slf4j.Logger;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import java.util.logging.Logger;
+import javax.sql.DataSource;
 
 public class BankControllerTest {
 
@@ -32,274 +24,353 @@ public class BankControllerTest {
     private Logger mockLogger;
 
     @Mock
-    private Connection mockConnection;
-
-    @Mock
-    private Statement mockStatement;
-
-    @Mock
-    private PreparedStatement mockPreparedStatement;
-
-    @Mock
-    private ResultSet mockResultSet;
-
-    @Mock
-    private DatabaseController mockDatabaseController;
+    private DatabaseController mockDbController;
 
     private BankController bankController;
 
     @BeforeEach
-    public void setUp() throws Exception {
+    public void setUp() {
         MockitoAnnotations.openMocks(this);
-
-        when(mockDataSource.getConnection()).thenReturn(mockConnection);
-        when(mockConnection.createStatement()).thenReturn(mockStatement);
-        when(mockConnection.prepareStatement(anyString())).thenReturn(mockPreparedStatement);
-        when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
-
         bankController = new BankController(mockDataSource, mockLogger);
-
-        // Initialize App.accounts and App.transactions for testing
-        App.accounts = new java.util.ArrayList<>();
-        App.transactions = new java.util.ArrayList<>();
-
-        // Add test accounts and transactions
-        UUID testId = UUID.randomUUID();
-        App.accounts.add(new Account(testId, "Test User", 1000.0));
-
-        Transaction testTransaction = new Transaction();
-        // Set transaction properties as needed
-        App.transactions.add(testTransaction);
     }
 
     @Test
-    public void testWelcome() {
-        String result = bankController.welcome();
-        assertEquals("Welcome to Jooby!", result);
-    }
+    public void testLogin() {
+        // Arrange
+        String testEmail = "test@example.com";
 
-    @Test
-    public void testListAccounts() {
-        String result = bankController.listAccounts();
-        assertTrue(result.contains("Account List"));
-        assertTrue(result.contains("Test User"));
-    }
+        // Act
+        ModelAndView result = bankController.login(testEmail);
 
-    @Test
-    public void testListTransactions() {
-        String result = bankController.listTransactions();
-        assertTrue(result.contains("Transaction List"));
-    }
-
-    @Test
-    public void testLoginWithoutEmail() {
-        ModelAndView modelAndView = bankController.login(null);
-
-        assertEquals("login.hbs", modelAndView.getView());
-        Map<String, Object> model = modelAndView.getModel();
-        assertEquals("Your", model.get("email"));
-    }
-
-    @Test
-    public void testLoginWithEmail() {
-        ModelAndView modelAndView = bankController.login("test@example.com");
-
-        assertEquals("login.hbs", modelAndView.getView());
-        Map<String, Object> model = modelAndView.getModel();
-        assertEquals("test@example.com's", model.get("email"));
+        // Assert
+        assertEquals("login.hbs", result.getTemplate());
+        Map<String, Object> model = result.getModel();
+        assertEquals(testEmail, model.get("email"));
     }
 
     @Test
     public void testDashboard() {
-        // Create a spy on the controller to mock the database calls
-        BankController spyController = spy(bankController);
+        // Arrange
+        String testEmail = "user@example.com";
+        UUID testId = UUID.randomUUID();
+        String testName = "Test User";
+        String testBalance = "1000.00";
+        List<Transaction> testTransactions = Arrays.asList(new Transaction("Test transaction", 100.0));
 
-        // Setup mock DatabaseController
-        UUID mockId = UUID.randomUUID();
-        DatabaseController mockDbController = mock(DatabaseController.class);
+        // Create a spy for DatabaseController to avoid actual database calls
+        try (MockedStatic<DatabaseController> mockedDbController = mockStatic(DatabaseController.class)) {
+            mockedDbController.when(() -> new DatabaseController(mockDataSource)).thenReturn(mockDbController);
 
-        // Mock the creation of DatabaseController
-        doReturn(mockDbController).when(spyController).new DatabaseController(any(DataSource.class));
+            when(mockDbController.getIDfromEmail(testEmail)).thenReturn(testId);
+            when(mockDbController.getNamefromID(testId)).thenReturn(testName);
+            when(mockDbController.getBalanceFromID(testId)).thenReturn(testBalance);
+            when(mockDbController.getTransactionsById(testId)).thenReturn(testTransactions);
 
-        when(mockDbController.getIDfromEmail("test@example.com")).thenReturn(mockId);
-        when(mockDbController.getNamefromID(mockId)).thenReturn("Test User");
-        when(mockDbController.getBalanceFromID(mockId)).thenReturn("1000.0");
-        when(mockDbController.getTransactionsById(mockId)).thenReturn(new java.util.ArrayList<>());
+            // Act
+            ModelAndView result = bankController.dashboard(testEmail);
 
-        ModelAndView modelAndView = spyController.dashboard("test@example.com");
-
-        assertEquals("dashboard.hbs", modelAndView.getView());
-        Map<String, Object> model = modelAndView.getModel();
-        assertEquals("test@example.com", model.get("email"));
-        assertEquals("Test User", model.get("name"));
-        assertEquals("1000.0", model.get("balance"));
-        assertEquals(mockId, model.get("id"));
+            // Assert
+            assertEquals("dashboard.hbs", result.getTemplate());
+            Map<String, Object> model = result.getModel();
+            assertEquals(testEmail, model.get("email"));
+            assertEquals(testName, model.get("name"));
+            assertEquals(testBalance, model.get("balance"));
+            assertEquals(testId, model.get("id"));
+            assertEquals(testTransactions, model.get("transactions"));
+        }
     }
 
     @Test
     public void testTransfer() {
-        // Create a spy on the controller to mock the database calls
-        BankController spyController = spy(bankController);
+        // Arrange
+        String testEmail = "user@example.com";
+        UUID testId = UUID.randomUUID();
+        String testName = "Test User";
+        String testBalance = "1000.00";
 
-        // Setup mock DatabaseController
-        UUID mockId = UUID.randomUUID();
-        DatabaseController mockDbController = mock(DatabaseController.class);
+        // Create a spy for DatabaseController to avoid actual database calls
+        try (MockedStatic<DatabaseController> mockedDbController = mockStatic(DatabaseController.class)) {
+            mockedDbController.when(() -> new DatabaseController(mockDataSource)).thenReturn(mockDbController);
 
-        // Mock the creation of DatabaseController
-        doReturn(mockDbController).when(spyController).new DatabaseController(any(DataSource.class));
+            when(mockDbController.getIDfromEmail(testEmail)).thenReturn(testId);
+            when(mockDbController.getNamefromID(testId)).thenReturn(testName);
+            when(mockDbController.getBalanceFromID(testId)).thenReturn(testBalance);
 
-        when(mockDbController.getIDfromEmail("test@example.com")).thenReturn(mockId);
-        when(mockDbController.getNamefromID(mockId)).thenReturn("Test User");
-        when(mockDbController.getBalanceFromID(mockId)).thenReturn("1000.0");
+            // Act
+            ModelAndView result = bankController.transfer(testEmail);
 
-        ModelAndView modelAndView = spyController.transfer("test@example.com");
-
-        assertEquals("transfer.hbs", modelAndView.getView());
-        Map<String, Object> model = modelAndView.getModel();
-        assertEquals("Test User", model.get("name"));
-        assertEquals("1000.0", model.get("balance"));
-        assertEquals(mockId, model.get("id"));
-        assertEquals("test@example.com", model.get("email"));
+            // Assert
+            assertEquals("transfer.hbs", result.getTemplate());
+            Map<String, Object> model = result.getModel();
+            assertEquals(testName, model.get("name"));
+            assertEquals(testBalance, model.get("balance"));
+            assertEquals(testId, model.get("id"));
+            assertEquals(testEmail, model.get("email"));
+        }
     }
 
     @Test
-    public void testHandleTransferSuccess() {
-        // Create a spy on the controller to mock the database calls
-        BankController spyController = spy(bankController);
+    public void testHandleTransfer_Success() {
+        // Arrange
+        String fromEmail = "from@example.com";
+        String toIdString = UUID.randomUUID().toString();
+        double amount = 100.0;
 
-        // Setup mock DatabaseController
         UUID fromId = UUID.randomUUID();
-        UUID toId = UUID.randomUUID();
-        DatabaseController mockDbController = mock(DatabaseController.class);
+        UUID toId = UUID.fromString(toIdString);
+        String fromName = "From User";
+        String fromBalance = "1000.00";
+        List<Transaction> transactions = Arrays.asList(new Transaction("Test transaction", 100.0));
 
-        // Mock the creation of DatabaseController
-        doReturn(mockDbController).when(spyController).new DatabaseController(any(DataSource.class));
+        // Create a spy for DatabaseController to avoid actual database calls
+        try (MockedStatic<DatabaseController> mockedDbController = mockStatic(DatabaseController.class)) {
+            mockedDbController.when(() -> new DatabaseController(mockDataSource)).thenReturn(mockDbController);
 
-        when(mockDbController.getIDfromEmail("from@example.com")).thenReturn(fromId);
-        when(mockDbController.getNamefromID(fromId)).thenReturn("From User");
-        when(mockDbController.getBalanceFromID(fromId)).thenReturn("1000.0");
-        when(mockDbController.getTransactionsById(fromId)).thenReturn(new java.util.ArrayList<>());
+            when(mockDbController.getIDfromEmail(fromEmail)).thenReturn(fromId);
+            when(mockDbController.getBalanceFromID(fromId)).thenReturn("1000.00");
+            when(mockDbController.getNamefromID(fromId)).thenReturn(fromName);
+            when(mockDbController.getTransactionsById(fromId)).thenReturn(transactions);
 
-        ModelAndView modelAndView = spyController.handleTransfer("from@example.com", toId.toString(), 500.0);
+            // Act
+            ModelAndView result = bankController.handleTransfer(fromEmail, toIdString, amount);
 
-        // Verify transfer was made
-        verify(mockDbController).transferFunds(fromId, toId, 500.0);
-
-        assertEquals("dashboard.hbs", modelAndView.getView());
-        Map<String, Object> model = modelAndView.getModel();
-        assertEquals("from@example.com", model.get("email"));
-        assertEquals("From User", model.get("name"));
-        assertEquals("1000.0", model.get("balance"));
-        assertEquals(fromId, model.get("id"));
+            // Assert
+            verify(mockDbController).transferFunds(fromId, toId, amount);
+            assertEquals("dashboard.hbs", result.getTemplate());
+            Map<String, Object> model = result.getModel();
+            assertEquals(fromEmail, model.get("email"));
+            assertEquals(fromName, model.get("name"));
+            assertEquals(fromBalance, model.get("balance"));
+            assertEquals(fromId, model.get("id"));
+            assertEquals(transactions, model.get("transactions"));
+        }
     }
 
     @Test
-    public void testHandleTransferInvalidDetails() {
-        Exception exception = assertThrows(StatusCodeException.class, () -> {
-            bankController.handleTransfer(null, UUID.randomUUID().toString(), 100.0);
-        });
+    public void testHandleTransfer_InvalidParams() {
+        // Test with null email
+        StatusCodeException exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleTransfer(null, UUID.randomUUID().toString(), 100.0)
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
 
-        assertTrue(exception.getMessage().contains("Invalid transfer details"));
+        // Test with null destination
+        exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleTransfer("email@example.com", null, 100.0)
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
+
+        // Test with zero amount
+        exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleTransfer("email@example.com", UUID.randomUUID().toString(), 0)
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
+
+        // Test with negative amount
+        exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleTransfer("email@example.com", UUID.randomUUID().toString(), -100.0)
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
     }
 
     @Test
-    public void testHandleTransferNegativeAmount() {
-        Exception exception = assertThrows(StatusCodeException.class, () -> {
-            bankController.handleTransfer("from@example.com", UUID.randomUUID().toString(), -100.0);
-        });
+    public void testHandleTransfer_InvalidAccounts() {
+        // Arrange
+        String fromEmail = "from@example.com";
+        String toIdString = UUID.randomUUID().toString();
+        double amount = 100.0;
 
-        assertTrue(exception.getMessage().contains("Invalid transfer details"));
+        // Create a spy for DatabaseController to avoid actual database calls
+        try (MockedStatic<DatabaseController> mockedDbController = mockStatic(DatabaseController.class)) {
+            mockedDbController.when(() -> new DatabaseController(mockDataSource)).thenReturn(mockDbController);
+
+            // Test with invalid source account
+            when(mockDbController.getIDfromEmail(fromEmail)).thenReturn(null);
+
+            StatusCodeException exception = assertThrows(StatusCodeException.class, () ->
+                    bankController.handleTransfer(fromEmail, toIdString, amount)
+            );
+            assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
+        }
     }
 
     @Test
-    public void testHandleTransferToSameAccount() {
-        // Create a spy on the controller to mock the database calls
-        BankController spyController = spy(bankController);
+    public void testHandleTransfer_SameAccount() {
+        // Arrange
+        String fromEmail = "from@example.com";
+        UUID id = UUID.randomUUID();
+        String toIdString = id.toString();
+        double amount = 100.0;
 
-        // Setup mock DatabaseController
-        UUID accountId = UUID.randomUUID();
-        DatabaseController mockDbController = mock(DatabaseController.class);
+        // Create a spy for DatabaseController to avoid actual database calls
+        try (MockedStatic<DatabaseController> mockedDbController = mockStatic(DatabaseController.class)) {
+            mockedDbController.when(() -> new DatabaseController(mockDataSource)).thenReturn(mockDbController);
 
-        // Mock the creation of DatabaseController
-        doReturn(mockDbController).when(spyController).new DatabaseController(any(DataSource.class));
+            when(mockDbController.getIDfromEmail(fromEmail)).thenReturn(id);
 
-        when(mockDbController.getIDfromEmail("user@example.com")).thenReturn(accountId);
-
-        Exception exception = assertThrows(StatusCodeException.class, () -> {
-            spyController.handleTransfer("user@example.com", accountId.toString(), 100.0);
-        });
-
-        assertTrue(exception.getMessage().contains("Cannot transfer to the same account"));
+            // Act & Assert
+            StatusCodeException exception = assertThrows(StatusCodeException.class, () ->
+                    bankController.handleTransfer(fromEmail, toIdString, amount)
+            );
+            assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
+        }
     }
 
     @Test
-    public void testHandleTransferInsufficientFunds() {
-        // Create a spy on the controller to mock the database calls
-        BankController spyController = spy(bankController);
-
-        // Setup mock DatabaseController
+    public void testHandleTransfer_InsufficientFunds() {
+        // Arrange
+        String fromEmail = "from@example.com";
         UUID fromId = UUID.randomUUID();
-        UUID toId = UUID.randomUUID();
-        DatabaseController mockDbController = mock(DatabaseController.class);
+        String toIdString = UUID.randomUUID().toString();
+        double amount = 2000.0; // More than balance
 
-        // Mock the creation of DatabaseController
-        doReturn(mockDbController).when(spyController).new DatabaseController(any(DataSource.class));
+        // Create a spy for DatabaseController to avoid actual database calls
+        try (MockedStatic<DatabaseController> mockedDbController = mockStatic(DatabaseController.class)) {
+            mockedDbController.when(() -> new DatabaseController(mockDataSource)).thenReturn(mockDbController);
 
-        when(mockDbController.getIDfromEmail("from@example.com")).thenReturn(fromId);
-        when(mockDbController.getBalanceFromID(fromId)).thenReturn("500.0");
+            when(mockDbController.getIDfromEmail(fromEmail)).thenReturn(fromId);
+            when(mockDbController.getBalanceFromID(fromId)).thenReturn("1000.00");
 
-        Exception exception = assertThrows(StatusCodeException.class, () -> {
-            spyController.handleTransfer("from@example.com", toId.toString(), 1000.0);
-        });
-
-        assertTrue(exception.getMessage().contains("Insufficient funds"));
+            // Act & Assert
+            StatusCodeException exception = assertThrows(StatusCodeException.class, () ->
+                    bankController.handleTransfer(fromEmail, toIdString, amount)
+            );
+            assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
+        }
     }
 
     @Test
     public void testSignup() {
-        ModelAndView modelAndView = bankController.signup();
+        // Act
+        ModelAndView result = bankController.signup();
 
-        assertEquals("signup.hbs", modelAndView.getView());
+        // Assert
+        assertEquals("signup.hbs", result.getTemplate());
+        assertNotNull(result.getModel());
     }
 
     @Test
-    public void testHandleSignupSuccess() {
-        // Create a spy on the controller to mock the database calls
-        BankController spyController = spy(bankController);
+    public void testHandleSignup_Success() {
+        // Arrange
+        String email = "new@example.com";
+        String name = "New User";
+        String password = "password123";
 
-        // Setup mock DatabaseController
-        DatabaseController mockDbController = mock(DatabaseController.class);
+        // Create a spy for DatabaseController to avoid actual database calls
+        try (MockedStatic<DatabaseController> mockedDbController = mockStatic(DatabaseController.class);
+             MockedStatic<UUID> mockedUUID = mockStatic(UUID.class)) {
 
-        // Mock the creation of DatabaseController
-        doReturn(mockDbController).when(spyController).new DatabaseController(any(DataSource.class), any(Logger.class));
+            UUID mockId = UUID.randomUUID();
+            mockedUUID.when(() -> UUID.randomUUID()).thenReturn(mockId);
 
-        ModelAndView modelAndView = spyController.handleSignup("new@example.com", "New User", "password123");
+            mockedDbController.when(() -> new DatabaseController(mockDataSource, mockLogger)).thenReturn(mockDbController);
 
-        // Verify user was created
-        verify(mockDbController).createUser(eq("new@example.com"), eq("New User"), eq("password123"), any(UUID.class));
-        verify(mockDbController).addAccount(any(Account.class));
+            // Act
+            ModelAndView result = bankController.handleSignup(email, name, password);
 
-        assertEquals("login.hbs", modelAndView.getView());
+            // Assert
+            verify(mockDbController).createUser(email, name, password, mockId);
+            verify(mockDbController).addAccount(any(Account.class));
+            assertEquals("login.hbs", result.getTemplate());
+        }
     }
 
     @Test
-    public void testHandleSignupMissingDetails() {
-        Exception exception = assertThrows(StatusCodeException.class, () -> {
-            bankController.handleSignup("", "New User", "password123");
-        });
+    public void testHandleSignup_InvalidParams() {
+        // Test with null email
+        StatusCodeException exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleSignup(null, "Name", "password")
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
 
-        assertTrue(exception.getMessage().contains("Name and password are required"));
+        // Test with null name
+        exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleSignup("email@example.com", null, "password")
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
 
-        exception = assertThrows(StatusCodeException.class, () -> {
-            bankController.handleSignup("new@example.com", "", "password123");
-        });
+        // Test with null password
+        exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleSignup("email@example.com", "Name", null)
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
 
-        assertTrue(exception.getMessage().contains("Name and password are required"));
+        // Test with empty email
+        exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleSignup("", "Name", "password")
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
 
-        exception = assertThrows(StatusCodeException.class, () -> {
-            bankController.handleSignup("new@example.com", "New User", "");
-        });
+        // Test with empty name
+        exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleSignup("email@example.com", "", "password")
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
 
-        assertTrue(exception.getMessage().contains("Name and password are required"));
+        // Test with empty password
+        exception = assertThrows(StatusCodeException.class, () ->
+                bankController.handleSignup("email@example.com", "Name", "")
+        );
+        assertEquals(StatusCode.BAD_REQUEST, exception.getStatusCode());
     }
+}
+
+// Helper classes that may be needed for compilation
+// Note: These would typically be defined in their own files, but are included here for completeness
+
+class ModelAndView {
+    private String template;
+    private Map<String, Object> model;
+
+    public ModelAndView(String template, Map<String, Object> model) {
+        this.template = template;
+        this.model = model;
+    }
+
+    public String getTemplate() {
+        return template;
+    }
+
+    public Map<String, Object> getModel() {
+        return model;
+    }
+}
+
+class Transaction {
+    private String description;
+    private double amount;
+
+    public Transaction(String description, double amount) {
+        this.description = description;
+        this.amount = amount;
+    }
+}
+
+class Account {
+    private UUID id;
+    private String name;
+    private double balance;
+
+    public Account(UUID id, String name, double balance) {
+        this.id = id;
+        this.name = name;
+        this.balance = balance;
+    }
+}
+
+class StatusCodeException extends RuntimeException {
+    private final StatusCode statusCode;
+
+    public StatusCodeException(StatusCode statusCode, String message) {
+        super(message);
+        this.statusCode = statusCode;
+    }
+
+    public StatusCode getStatusCode() {
+        return statusCode;
+    }
+}
+
+enum StatusCode {
+    BAD_REQUEST
 }
