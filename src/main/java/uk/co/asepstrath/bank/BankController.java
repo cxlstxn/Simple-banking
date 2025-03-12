@@ -49,46 +49,9 @@ public class BankController {
      */
 
     
-    @GET
-    public String welcome() {
-        return "Welcome to Jooby!";
-    }
-
-    @GET("/accounts")
-    public String listAccounts() {
-        StringBuilder output = new StringBuilder();
-        output.append("Account List");
-        output.append("\n");
-
-        for (Account account : App.accounts) {
-            output.append(account.toString()).append("\n");
-        }
-
-        return output.toString();
-    }
-
-    @GET("/transactions")
-    public String listTransactions() {
-        StringBuilder output = new StringBuilder();
-        output.append("Transaction List");
-        output.append("\n");
-
-        for (Transaction transaction : App.transactions) {
-            output.append(transaction.toString()).append("\n");
-        }
-
-        return output.toString();
-    }
 
     @GET("/login")
     public ModelAndView login(@QueryParam String email) {
-
-        // If no name has been sent within the query URL
-        if (email == null) {
-            email = "Your";
-        } else {
-            email = email + "'s";
-        }
 
         // we must create a model to pass to the "login" template
         Map<String, Object> model = new HashMap<>();
