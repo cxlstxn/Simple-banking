@@ -70,5 +70,7 @@ public class AccountTests {
         Account a = new Account(UUID.randomUUID(), "TestStringAccount", 10, false);
         Assertions.assertEquals("Name: TestStringAccount | Balance: 10.0", a.toString());
     }
+
+
 }
 
