@@ -127,7 +127,9 @@ li a:hover:not(.active) {
 }
 
 #transfer input[type="text"],
-#transfer input[type="number"] {
+#transfer input[type="number"],
+#transfer input[type="email"],
+#transfer input[type="password"]{
     width: calc(100% - 22px);
     padding: 10px;
     margin-bottom: 10px;
