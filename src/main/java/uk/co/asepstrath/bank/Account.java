@@ -33,16 +33,6 @@ public class Account {
         balance = balance.subtract(amountInBigDecimal);
     }
 
-    public void enableRoundUp() {
-    if (!roundUpEnabled) {
-        roundUpEnabled = true;
-    }
-    }
-    public void disableRoundUp() {
-        if (roundUpEnabled) {
-            roundUpEnabled = false;
-        }
-    }
     public BigDecimal getBalance() {
         return balance;
     }
