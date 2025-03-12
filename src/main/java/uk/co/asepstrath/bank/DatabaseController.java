@@ -16,16 +16,18 @@ import java.util.Collections;
 
 public class DatabaseController {
 
-    private static Logger log;
+    private DataSource dataSource;
+    private Logger log;
 
+    // Constructor with both DataSource and Logger
     public DatabaseController(DataSource dataSource, Logger log) {
         this.dataSource = dataSource;
         this.log = log;
     }
-    private final DataSource dataSource;
 
+    // Constructor with only DataSource (optional, but ensure logger is initialized)
     public DatabaseController(DataSource dataSource) {
-        this.dataSource = dataSource;
+        this(dataSource, null); // You can provide a default logger here or throw an exception
     }
 
     public void setupDatabase() {
@@ -312,8 +314,4 @@ public class DatabaseController {
     public boolean verifyPassword(String enteredPassword, String encryptedPassword){
         return BCrypt.checkpw(enteredPassword, encryptedPassword);
     }
-
-
-
-
 }
