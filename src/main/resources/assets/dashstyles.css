@@ -127,8 +127,7 @@ li a:hover:not(.active) {
 }
 
 #transfer input[type="text"],
-#transfer input[type="number"]
-#transfer input[type="text"] {
+#transfer input[type="number"] {
     width: calc(100% - 22px);
     padding: 10px;
     margin-bottom: 10px;
@@ -150,3 +149,4 @@ li a:hover:not(.active) {
 #transfer button:hover {
     background-color: #005bb5;
 }
+
