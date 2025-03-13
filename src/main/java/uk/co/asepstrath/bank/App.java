@@ -72,6 +72,12 @@ public class App extends Jooby {
         Logger log = getLog();
         log.info("Starting Up...");
 
+        fetchAccounts();
+        fetchTransactions();
+        setupDatabase(log);
+    }
+
+    private void fetchAccounts() {
         try {
             URL url = new URL("https://api.asep-strath.co.uk/api/accounts");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -90,92 +96,107 @@ public class App extends Jooby {
             }
             scanner.close();
 
-
-            JsonReader jsonReader = Json.createReader(new StringReader(inline.toString()));
-            JsonArray jsonArray = jsonReader.readArray();
-            jsonReader.close();
-
-            for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
-                UUID id = UUID.fromString(jsonObject.getString("id"));
-                accounts.add(new Account(id, jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue()));
-            }
-
+            parseAccountsData(inline.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
 
+    private void parseAccountsData(String data) {
+        JsonReader jsonReader = Json.createReader(new StringReader(data));
+        JsonArray jsonArray = jsonReader.readArray();
+        jsonReader.close();
+
+        for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
+            UUID id = UUID.fromString(jsonObject.getString("id"));
+            accounts.add(new Account(id, jsonObject.getString("name"),
+                    jsonObject.getJsonNumber("startingBalance").doubleValue()));
+        }
+    }
+
+    private void fetchTransactions() {
         try {
             for (int i = 0; i < 154; i++) {
+                String urlString = "https://api.asep-strath.co.uk/api/transactions?page=" + i;
+                URL url = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
 
-            // URL of the API
-            String urlString = "https://api.asep-strath.co.uk/api/transactions?page=" + i;
-            URL url = new URL(urlString);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-
-            // Read the response body
-            String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
-
-            // Parse the XML
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            Document document = builder.parse(new InputSource(new StringReader(responseBody)));
-
-            // Normalize the XML structure
-            document.getDocumentElement().normalize();
-
-            // Get the root <pageResult> element
-            Element pageResult = document.getDocumentElement();
-
-            // Get all <results> elements under <pageResult>
-            NodeList resultsList = pageResult.getElementsByTagName("results");
-            if (resultsList.getLength() == 0) {
-                continue; // Skip to the next page
-            }
-
-            // Iterate through <results> elements
-            for (int x = 0; x < resultsList.getLength(); x++) {
-                Node node = resultsList.item(x);
-
-                // Check if the <results> element has the correct type
-                if (node.getNodeType() == Node.ELEMENT_NODE) {
-                Element element = (Element) node;
-
-                // Check if the xsi:type attribute is "transactionModel"
-                String typeAttribute = element.getAttribute("xsi:type");
-                if ("transactionModel".equals(typeAttribute)) {
-                    try {
-                    // Extract transaction data with null checks
-                    Node idNode = element.getElementsByTagName("id").item(0);
-                    Node fromNode = element.getElementsByTagName("from").item(0);
-                    Node toNode = element.getElementsByTagName("to").item(0);
-                    Node amountNode = element.getElementsByTagName("amount").item(0);
-                    Node timestampNode = element.getElementsByTagName("timestamp").item(0);
-                    Node typeNode = element.getElementsByTagName("type").item(0);
-
-                    // Get text content of each field
-                    UUID id = UUID.fromString(idNode.getTextContent());
-                    String from = fromNode != null ? fromNode.getTextContent() : null;
-                    String to = toNode != null ? toNode.getTextContent() : null;
-                    double amount = Double.parseDouble(amountNode.getTextContent());
-                    String date = timestampNode.getTextContent();
-                    String type = typeNode.getTextContent();
-
-                    // Add transaction to the list
-                    transactions.add(new Transaction(id, amount, date, from, to, type));
-                    } catch (Exception e) {
-                    System.err.println("Error processing transaction on page " + i + ": " + e.getMessage());
-                    }
-                }
-                }
-            }
+                // Read the response body
+                String responseBody = new Scanner(connection.getInputStream()).useDelimiter("\\A").next();
+                processTransactionPage(responseBody, i);
             }
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println("Error parsing XML: " + e.getMessage());
         }
+    }
 
+    private void processTransactionPage(String responseBody, int pageNumber) throws Exception {
+        // Parse the XML
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document document = builder.parse(new InputSource(new StringReader(responseBody)));
 
+        // Normalize the XML structure
+        document.getDocumentElement().normalize();
+
+        // Get the root <pageResult> element
+        Element pageResult = document.getDocumentElement();
+
+        // Get all <results> elements under <pageResult>
+        NodeList resultsList = pageResult.getElementsByTagName("results");
+        if (resultsList.getLength() == 0) {
+            return; // Skip to the next page
+        }
+
+        processTransactionResults(resultsList, pageNumber);
+    }
+
+    private void processTransactionResults(NodeList resultsList, int pageNumber) {
+        // Iterate through <results> elements
+        for (int x = 0; x < resultsList.getLength(); x++) {
+            Node node = resultsList.item(x);
+
+            // Check if the <results> element has the correct type
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) node;
+
+                // Check if the xsi:type attribute is "transactionModel"
+                String typeAttribute = element.getAttribute("xsi:type");
+                if ("transactionModel".equals(typeAttribute)) {
+                    extractAndAddTransaction(element, pageNumber);
+                }
+            }
+        }
+    }
+
+    private void extractAndAddTransaction(Element element, int pageNumber) {
+        try {
+            // Extract transaction data with null checks
+            Node idNode = element.getElementsByTagName("id").item(0);
+            Node fromNode = element.getElementsByTagName("from").item(0);
+            Node toNode = element.getElementsByTagName("to").item(0);
+            Node amountNode = element.getElementsByTagName("amount").item(0);
+            Node timestampNode = element.getElementsByTagName("timestamp").item(0);
+            Node typeNode = element.getElementsByTagName("type").item(0);
+
+            // Get text content of each field
+            UUID id = UUID.fromString(idNode.getTextContent());
+            String from = fromNode != null ? fromNode.getTextContent() : null;
+            String to = toNode != null ? toNode.getTextContent() : null;
+            double amount = Double.parseDouble(amountNode.getTextContent());
+            String date = timestampNode.getTextContent();
+            String type = typeNode.getTextContent();
+
+            // Add transaction to the list
+            transactions.add(new Transaction(id, amount, date, from, to, type));
+        } catch (Exception e) {
+            System.err.println("Error processing transaction on page " + pageNumber + ": " + e.getMessage());
+        }
+    }
+
+    private void setupDatabase(Logger log) {
         // Fetch DB Source
         DataSource ds = require(DataSource.class);
 
@@ -184,7 +205,8 @@ public class App extends Jooby {
         dbController.setupDatabase();
 
         // creating test user connected to already existing account from api
-        dbController.createUser("test@scotbank.com", "Melva Rogahn", "test", UUID.fromString("04f6ab33-8208-4234-aabd-b6a8be8493da"));
+        dbController.createUser("test@scotbank.com", "Melva Rogahn", "test",
+                UUID.fromString("04f6ab33-8208-4234-aabd-b6a8be8493da"));
     }
 
     /*
