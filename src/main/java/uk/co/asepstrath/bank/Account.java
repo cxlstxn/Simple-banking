@@ -40,8 +40,6 @@ public class Account {
     @Override
     public String toString() {
         return "Name: " + name + " | Balance: " + balance;
-        //return "ID: " + id + " | Name: " + name + " | Balance: " + balance + " | Round up: " + roundUpEnabled;
-        //Not too sure what to put into the output string
     }
 
     public String getName() {
