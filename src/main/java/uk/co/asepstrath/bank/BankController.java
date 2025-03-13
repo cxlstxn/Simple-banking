@@ -4,22 +4,12 @@ import io.jooby.ModelAndView;
 import io.jooby.StatusCode;
 import io.jooby.annotation.*;
 import io.jooby.exception.StatusCodeException;
-import io.jooby.handlebars.HandlebarsModule;
-import kong.unirest.core.Unirest;
 
-import org.h2.engine.Database;
 import org.slf4j.Logger;
-import uk.co.asepstrath.bank.Account;
-import uk.co.asepstrath.bank.App;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 
 
@@ -47,8 +37,6 @@ public class BankController {
     The @GET annotation denotes that this function should be invoked when a GET HTTP request is sent to <host>/example
     The returned string will then be sent to the requester
      */
-
-    
 
     @GET("/login")
     public ModelAndView login(@QueryParam String email) {

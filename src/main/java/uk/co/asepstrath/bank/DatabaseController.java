@@ -50,11 +50,12 @@ public class DatabaseController {
     }
 
     private void createTables(Connection connection) throws SQLException {
-        Statement stmt = connection.createStatement();
+        try (Statement stmt = connection.createStatement()) {
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255))");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
+        }
     }
 
     private void insertBusinesses(Connection connection) throws SQLException {
