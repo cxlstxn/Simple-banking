@@ -6,22 +6,13 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
-import uk.co.asepstrath.bank.BankController;
 import io.jooby.Jooby;
 import io.jooby.handlebars.HandlebarsModule;
 import io.jooby.helper.UniRestExtension;
 import io.jooby.hikari.HikariModule;
 import org.slf4j.Logger;
-import io.jooby.Jooby;
-import io.jooby.Session;
-import io.jooby.SessionStore;
-import io.jooby.handlebars.HandlebarsModule;
 import javax.sql.DataSource;
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
-import java.sql.Connection;
 import java.util.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -34,8 +25,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 public class App extends Jooby {
 
-    public static ArrayList<Account> accounts = new ArrayList<>(); // Temporary account data
-    public static ArrayList<Transaction> transactions = new ArrayList<>(); // Temporary transaction data
+    public static final List<Account> accounts = new ArrayList<>(); // Temporary account data
+    public static final List<Transaction> transactions = new ArrayList<>(); // Temporary transaction data
 
     {
         /*
