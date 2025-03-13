@@ -1,7 +1,6 @@
 package uk.co.asepstrath.bank;
 
 import io.jooby.ModelAndView;
-import io.jooby.StatusCode;
 import io.jooby.exception.StatusCodeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,17 +13,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-public class BankControllerTest {
+class BankControllerTest {
 
     @Mock
     private DataSource mockDataSource;
@@ -50,7 +46,7 @@ public class BankControllerTest {
     private BankController bankController;
 
     @BeforeEach
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
 
         // Setup for mock DB connections
@@ -63,7 +59,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testLogin() {
+    void testLogin() {
         // Arrange
         String email = "test@example.com";
 
@@ -78,7 +74,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testDashboard() {
+    void testDashboard() {
         // This test requires mocking DatabaseController which is created inside the method
         // In a real scenario, you would inject DatabaseController rather than creating it internally
 
@@ -97,7 +93,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testTransfer() {
+    void testTransfer() {
         // Similar to dashboard, this test requires mocking DatabaseController
         String email = "test@example.com";
 
@@ -112,7 +108,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testHandleTransfer_ValidInput() {
+    void testHandleTransfer_ValidInput() {
         // Arrange
         String email = "sender@example.com";
         String to = UUID.randomUUID().toString();
@@ -129,7 +125,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testHandleTransfer_InvalidInput() {
+    void testHandleTransfer_InvalidInput() {
         // Arrange
         String email = null;
         String to = UUID.randomUUID().toString();
@@ -142,7 +138,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testHandleTransfer_SameAccount() {
+    void testHandleTransfer_SameAccount() {
         // This test requires mocking DatabaseController to return the same UUID for both accounts
         // This is a placeholder test showing coverage
         String email = "test@example.com";
@@ -160,7 +156,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testHandleTransfer_InsufficientFunds() {
+    void testHandleTransfer_InsufficientFunds() {
         // This test requires mocking DatabaseController to return a balance lower than amount
         // This is a placeholder test showing coverage
         String email = "test@example.com";
@@ -178,7 +174,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testSignup() {
+    void testSignup() {
         // Act
         ModelAndView result = bankController.signup();
 
@@ -188,7 +184,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testHandleSignup_ValidInput() {
+    void testHandleSignup_ValidInput() {
         // Arrange
         String email = "test@example.com";
         String name = "Test User";
@@ -205,7 +201,7 @@ public class BankControllerTest {
     }
 
     @Test
-    public void testHandleSignup_InvalidInput() {
+    void testHandleSignup_InvalidInput() {
         // Arrange
         String email = "";
         String name = "Test User";

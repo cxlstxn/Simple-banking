@@ -10,32 +10,33 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 
-public class AppTest {
+class AppTest {
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         App.accounts.clear();
         App.transactions.clear();
     }
 
     @Test
-    public void testOnStartPopulatesAccounts() {
+    void testOnStartPopulatesAccounts() {
         App app = new App();
         app.onStart();
         assertFalse(App.accounts.isEmpty(), "Accounts list should not be empty after onStart");
     }
 
     @Test
-    public void testOnStartPopulatesTransactions() {
+    void testOnStartPopulatesTransactions() {
         App app = new App();
         app.onStart();
         assertFalse(App.transactions.isEmpty(), "Transactions list should not be empty after onStart");
     }
 
     @Test
-    public void testOnStartPopulatesDatabaseWithAccounts() throws SQLException {
+    void testOnStartPopulatesDatabaseWithAccounts() throws SQLException {
         App app = new App();
         app.onStart();
         DataSource ds = app.require(DataSource.class);
@@ -44,12 +45,12 @@ public class AppTest {
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) AS count FROM Accounts");
             rs.next();
             int count = rs.getInt("count");
-            assertFalse(count == 0, "Accounts table should not be empty after onStart");
+            assertNotEquals(0, count, "Accounts table should not be empty after onStart");
         }
     }
 
     @Test
-    public void testOnStartPopulatesDatabaseWithTransactions() throws SQLException {
+    void testOnStartPopulatesDatabaseWithTransactions() throws SQLException {
         App app = new App();
         app.onStart();
         DataSource ds = app.require(DataSource.class);
@@ -58,7 +59,7 @@ public class AppTest {
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) AS count FROM Transactions");
             rs.next();
             int count = rs.getInt("count");
-            assertFalse(count == 0, "Transactions table should not be empty after onStart");
+            assertNotEquals(0, count, "Transactions table should not be empty after onStart");
         }
     }
 }
