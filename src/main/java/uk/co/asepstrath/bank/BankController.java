@@ -1,5 +1,6 @@
 package uk.co.asepstrath.bank;
 
+import io.jooby.Context;
 import io.jooby.ModelAndView;
 import io.jooby.StatusCode;
 import io.jooby.annotation.*;
@@ -12,45 +13,42 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-
-/*
-    Example Controller is a Controller from the MVC paradigm.
-    The @Path Annotation will tell Jooby what /path this Controller can respond to,
-    in this case the controller will respond to requests from <host>/example
- */
 @Path("/scotbank")
 public class BankController {
 
     private final DataSource dataSource;
     private final Logger logger;
 
-    /*
-    This constructor can take in any dependencies the controller may need to respond to a request
-     */
     public BankController(DataSource ds, Logger log) {
         dataSource = ds;
         logger = log;
     }
 
-    /*
-    This is the simplest action a controller can perform
-    The @GET annotation denotes that this function should be invoked when a GET HTTP request is sent to <host>/example
-    The returned string will then be sent to the requester
-     */
-
     @GET("/login")
-    public ModelAndView login(@QueryParam String email) {
-
-        // we must create a model to pass to the "login" template
+    public ModelAndView login() {
         Map<String, Object> model = new HashMap<>();
-        model.put("email", email);
-
         return new ModelAndView("login.hbs", model);
     }
 
+    @POST("/login")
+    public ModelAndView handleLogin(@FormParam String email, @FormParam String password, Context ctx) {
+        if (email == null || password == null || email.isEmpty() || password.isEmpty()) {
+            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Email and password are required.");
+        }
+        ctx.session().put("email", email);
+        ctx.setResponseCode(StatusCode.OK_CODE);
+        ctx.sendRedirect("/scotbank/dashboard");
+        return null;
+    }
+
     @GET("/dashboard")
-    public ModelAndView dashboard(@QueryParam String email) {
-        // we must create a model to pass to the "dashboard" template
+    public ModelAndView dashboard(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            return null;
+        }
+
         Map<String, Object> model = new HashMap<>();
         DatabaseController dbController = new DatabaseController(dataSource);
         UUID accountID = dbController.getIDfromEmail(email);
@@ -63,8 +61,13 @@ public class BankController {
     }
 
     @GET("/transfer")
-    public ModelAndView transfer(@QueryParam String email) {
-        // we must create a model to pass to the "dashboard" template
+    public ModelAndView transfer(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            return null;
+        }
+
         Map<String, Object> model = new HashMap<>();
         DatabaseController dbController = new DatabaseController(dataSource);
         UUID accountID = dbController.getIDfromEmail(email);
@@ -74,47 +77,46 @@ public class BankController {
         model.put("id", accountID);
         model.put("email", email);
         return new ModelAndView("transfer.hbs", model);
-        }
+    }
 
     @POST("/transfer")
     public ModelAndView handleTransfer(@FormParam String email, @FormParam String to, @FormParam double amount) {
-    if (email == null || to == null || amount <= 0) {
-        throw new StatusCodeException(StatusCode.BAD_REQUEST, "Invalid transfer details.");
-    }
+        if (email == null || to == null || amount <= 0) {
+            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Invalid transfer details.");
+        }
 
-    DatabaseController dbController = new DatabaseController(dataSource);
-    UUID fromAccountID = dbController.getIDfromEmail(email);
-    UUID toAccountID = UUID.fromString(to);
+        DatabaseController dbController = new DatabaseController(dataSource);
+        UUID fromAccountID = dbController.getIDfromEmail(email);
+        UUID toAccountID = UUID.fromString(to);
 
-    if (fromAccountID == null || toAccountID == null) {
-        throw new StatusCodeException(StatusCode.BAD_REQUEST, "Invalid account details.");
-    }
+        if (fromAccountID == null || toAccountID == null) {
+            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Invalid account details.");
+        }
 
-    if (fromAccountID.equals(toAccountID)) {
-        throw new StatusCodeException(StatusCode.BAD_REQUEST, "Cannot transfer to the same account.");
-    }
+        if (fromAccountID.equals(toAccountID)) {
+            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Cannot transfer to the same account.");
+        }
 
-    if (Double.parseDouble(dbController.getBalanceFromID(fromAccountID)) < amount){
-        throw new StatusCodeException(StatusCode.BAD_REQUEST, "Insufficient funds.");
-    }
+        if (Double.parseDouble(dbController.getBalanceFromID(fromAccountID)) < amount) {
+            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Insufficient funds.");
+        }
 
+        dbController.transferFunds(fromAccountID, toAccountID, amount);
 
-    dbController.transferFunds(fromAccountID, toAccountID, amount);
+        Map<String, Object> model = new HashMap<>();
+        model.put("email", email);
+        model.put("name", dbController.getNamefromID(fromAccountID));
+        model.put("balance", dbController.getBalanceFromID(fromAccountID));
+        model.put("id", fromAccountID);
+        model.put("transactions", dbController.getTransactionsById(fromAccountID));
 
-    Map<String, Object> model = new HashMap<>();
-    model.put("email", email);
-    model.put("name", dbController.getNamefromID(fromAccountID));
-    model.put("balance", dbController.getBalanceFromID(fromAccountID));
-    model.put("id", fromAccountID);
-    model.put("transactions", dbController.getTransactionsById(fromAccountID));
-
-    return new ModelAndView("dashboard.hbs", model);
+        return new ModelAndView("dashboard.hbs", model);
     }
 
     @GET("/signup")
     public ModelAndView signup() {
-    Map<String, Object> model = new HashMap<>();
-    return new ModelAndView("signup.hbs",model);
+        Map<String, Object> model = new HashMap<>();
+        return new ModelAndView("signup.hbs",model);
     }
 
     @POST("/signup")
@@ -128,7 +130,7 @@ public class BankController {
         dbController.createUser(email, name, password, id);
 
         dbController.addAccount(new Account(id, name, 0));
-        
+
         // Redirect to login page
         Map<String, Object> model = new HashMap<>();
         return new ModelAndView("login.hbs", model);

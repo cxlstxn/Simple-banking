@@ -315,4 +315,20 @@ public class DatabaseController {
     public boolean verifyPassword(String enteredPassword, String encryptedPassword){
         return BCrypt.checkpw(enteredPassword, encryptedPassword);
     }
+
+    public boolean validateUser(String email, String password) {
+        String query = "SELECT Password FROM Users WHERE Email = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, email);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return verifyPassword(password, rs.getString("Password"));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error validating user with Email: " + email, e);
+        }
+        return false;
+    }
 }

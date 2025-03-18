@@ -7,6 +7,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import io.jooby.Jooby;
+import io.jooby.SessionStore;
 import io.jooby.handlebars.HandlebarsModule;
 import io.jooby.helper.UniRestExtension;
 import io.jooby.hikari.HikariModule;
@@ -205,8 +206,8 @@ public class App extends Jooby {
         dbController.setupDatabase();
 
         // creating test user connected to already existing account from api
-        dbController.createUser("test@scotbank.com", "Melva Rogahn", "test",
-                UUID.fromString("04f6ab33-8208-4234-aabd-b6a8be8493da"));
+        dbController.createUser("test@scotbank.com", "Ray VonRueden", "test",
+                UUID.fromString("0002c352-6f10-4bd4-8783-074705090db4"));
     }
 
     /*
