@@ -187,7 +187,6 @@ public class BankController {
 
         Map<String, Object> model = new HashMap<>();
         DatabaseController dbController = new DatabaseController(dataSource);
-
         if (!dbController.getRoleFromEmail(email).equals("admin")) {
             ctx.sendRedirect("/scotbank/login");
             ctx.session().destroy();
