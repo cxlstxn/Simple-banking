@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -62,11 +63,29 @@ public class BankController {
         Map<String, Object> model = new HashMap<>();
         DatabaseController dbController = new DatabaseController(dataSource);
         UUID accountID = dbController.getIDfromEmail(email);
+
+        List<Transaction> transactions = dbController.getTransactionsById(accountID);
+
+        for (Transaction transaction : transactions) {
+            if (transaction.getFrom() != null) {
+                transaction.setFrom(dbController.getNamefromID(UUID.fromString(transaction.getFrom())));
+            }
+
+            if (transaction.getTo() != null) {
+                if (transaction.getTo().length() <= 3) {
+                    transaction.setTo(dbController.getBusinessName(transaction.getTo()));
+                } else {
+                    transaction.setTo(dbController.getNamefromID(UUID.fromString(transaction.getTo())));
+                }
+            }
+                
+        }
+        
         model.put("email", email);
         model.put("name", dbController.getNamefromID(accountID));
         model.put("balance", dbController.getBalanceFromID(accountID));
         model.put("id", accountID);
-        model.put("transactions", dbController.getTransactionsById(accountID));
+        model.put("transactions", transactions);
         return new ModelAndView("dashboard.hbs", model);
     }
 

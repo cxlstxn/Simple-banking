@@ -328,4 +328,22 @@ public class DatabaseController {
         }
         return null;
     }
+
+
+    public String getBusinessName(String id) {
+        String query = "SELECT Name FROM Businesses WHERE id = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setObject(1, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("Name");
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving business with ID: " + id, e);
+        }
+        return null;
+    }
+    
 }
