@@ -183,7 +183,7 @@ public class DatabaseController {
         return transactions;
     }
 
-    public void createUser(String email, String name, String password, UUID account) {
+    public void createUser(String email, String name, String password, String Role, UUID account) {
         String query = "INSERT INTO Users (id, Email, Name, Password, Role, Account) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
@@ -191,7 +191,7 @@ public class DatabaseController {
             preparedStatement.setString(2, email);
             preparedStatement.setString(3, name);
             preparedStatement.setString(4, encryptPassword(password));
-            preparedStatement.setString(5, "User");
+            preparedStatement.setString(5, Role);
             preparedStatement.setObject(6, account);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
@@ -345,5 +345,66 @@ public class DatabaseController {
         }
         return null;
     }
-    
+
+    public String getRoleFromEmail(String email) {
+        String query = "SELECT Role FROM Users WHERE Email = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, email);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("Role");
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving role for user with Email: " + email, e);
+        }
+        return null;
+    }
+
+    public List<Transaction> getAllTransactions() {
+        List<Transaction> transactions = new ArrayList<>();
+        String query = "SELECT id, `From`, `To`, Amount, Date, Type FROM Transactions";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    UUID transactionId = UUID.fromString(rs.getString("id"));
+                    String from = (rs.getString("From"));
+                    String to = (rs.getString("To"));
+                    double amount = rs.getDouble("Amount");
+                    String date = rs.getString("Date");
+                    String type = rs.getString("Type");
+                    transactions.add(new Transaction(transactionId, amount, date, from, to, type));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving all transactions", e);
+        }
+
+        Collections.reverse(transactions); // reversing so most recent transactions are first
+
+        return transactions;
+    }
+
+    public List<Account> getAllAccounts() {
+        List<Account> accounts = new ArrayList<>();
+        String query = "SELECT id, Name, Balance FROM Accounts";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    UUID accountId = UUID.fromString(rs.getString("id"));
+                    String name = rs.getString("Name");
+                    double balance = rs.getDouble("Balance");
+                    accounts.add(new Account(accountId, name, balance));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving all accounts", e);
+        }
+
+        return accounts;
+    }
+
 }
