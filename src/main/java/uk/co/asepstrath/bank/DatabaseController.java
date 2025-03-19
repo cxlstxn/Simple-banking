@@ -52,7 +52,7 @@ public class DatabaseController {
     private void createTables(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255))");
+        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255), Type VARCHAR(255) )");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
         stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
         }
@@ -97,7 +97,7 @@ public class DatabaseController {
     }
 
     private void insertTransactions(Connection connection) throws SQLException {
-        String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date) VALUES (?, ?, ?, ?, ?)";
+        String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date, Type) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement preparedStatement = connection.prepareStatement(insertTransactionSql)) {
             for (Transaction transaction : App.transactions) {
                 preparedStatement.setObject(1, transaction.getTransactionId());
@@ -105,6 +105,7 @@ public class DatabaseController {
                 preparedStatement.setObject(3, transaction.getTo());
                 preparedStatement.setDouble(4, transaction.getAmount());
                 preparedStatement.setString(5, transaction.getDate());
+                preparedStatement.setString(6, transaction.getType());
                 preparedStatement.executeUpdate();
             }
         }
@@ -155,32 +156,9 @@ public class DatabaseController {
         return null;
     }
 
-    public List<Transaction> getTransactionsFromId(UUID accountId) {
-        List<Transaction> transactions = new ArrayList<>();
-        String query = "SELECT id, `From`, `To`, Amount, Date FROM Transactions WHERE `From` = ? OR `To` = ?";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-            preparedStatement.setObject(1, accountId);
-            preparedStatement.setObject(2, accountId);
-            try (ResultSet rs = preparedStatement.executeQuery()) {
-                while (rs.next()) {
-                    UUID id = UUID.fromString(rs.getString("id"));
-                    String from = (rs.getString("From"));
-                    String to = (rs.getString("To"));
-                    double amount = rs.getDouble("Amount");
-                    String date = rs.getString("Date");
-                    transactions.add(new Transaction(id, amount, date, from, to, "temp"));
-                }
-            }
-        } catch (SQLException e) {
-            log.error("Error retrieving transactions for account with ID: " + accountId, e);
-        }
-        return transactions;
-    }
-
     public List<Transaction> getTransactionsById(UUID id) {
         List<Transaction> transactions = new ArrayList<>();
-        String query = "SELECT id, `From`, `To`, Amount, Date FROM Transactions WHERE `From` = ? OR `To` = ?";
+        String query = "SELECT id, `From`, `To`, Amount, Date, Type FROM Transactions WHERE `From` = ? OR `To` = ?";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, id.toString());
@@ -192,7 +170,8 @@ public class DatabaseController {
                     String to = (rs.getString("To"));
                     double amount = rs.getDouble("Amount");
                     String date = rs.getString("Date");
-                    transactions.add(new Transaction(transactionId, amount, date, from, to, "temp"));
+                    String type = rs.getString("Type");
+                    transactions.add(new Transaction(transactionId, amount, date, from, to, type));
                 }
             }
         } catch (SQLException e) {
@@ -271,7 +250,7 @@ public class DatabaseController {
     public void transferFunds(UUID fromAccountId, UUID toAccountId, double amount) {
         String withdrawSql = "UPDATE Accounts SET Balance = Balance - ? WHERE id = ?";
         String depositSql = "UPDATE Accounts SET Balance = Balance + ? WHERE id = ?";
-        String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date) VALUES (?, ?, ?, ?, ?)";
+        String insertTransactionSql = "INSERT INTO Transactions (id, `From`, `To`, Amount, Date, Type) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
@@ -296,6 +275,7 @@ public class DatabaseController {
                 transactionStmt.setObject(3, toAccountId);
                 transactionStmt.setDouble(4, amount);
                 transactionStmt.setString(5, new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(new java.util.Date()));
+                transactionStmt.setString(6, "TRANSFER");
                 transactionStmt.executeUpdate();
 
                 connection.commit();
