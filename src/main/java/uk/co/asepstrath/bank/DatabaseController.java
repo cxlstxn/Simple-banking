@@ -387,6 +387,32 @@ public class DatabaseController {
         return transactions;
     }
 
+
+    public List<Transaction> getAllSanctionedTransactions() {
+        List<Transaction> transactions = new ArrayList<>();
+        String query = "SELECT id, `From`, `To`, Amount, Date, Type FROM Transactions";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    UUID transactionId = UUID.fromString(rs.getString("id"));
+                    String from = (rs.getString("From"));
+                    String to = (rs.getString("To"));
+                    double amount = rs.getDouble("Amount");
+                    String date = rs.getString("Date");
+                    String type = rs.getString("Type");
+                    transactions.add(new Transaction(transactionId, amount, date, from, to, type));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving all transactions", e);
+        }
+
+        Collections.reverse(transactions); // reversing so most recent transactions are first
+
+        return transactions;
+    }
+
     public List<Account> getAllAccounts() {
         List<Account> accounts = new ArrayList<>();
         String query = "SELECT id, Name, Balance FROM Accounts";
@@ -406,5 +432,6 @@ public class DatabaseController {
 
         return accounts;
     }
+
 
 }

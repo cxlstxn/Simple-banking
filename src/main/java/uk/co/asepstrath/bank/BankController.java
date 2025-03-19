@@ -119,6 +119,28 @@ public class BankController {
         return new ModelAndView("transfer.hbs", model);
     }
 
+
+    @GET("/roundUp")
+    public ModelAndView roundUp(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+        UUID accountID = dbController.getIDfromEmail(email);
+
+        model.put("name", dbController.getNamefromID(accountID));
+        model.put("balance", dbController.getBalanceFromID(accountID));
+        model.put("id", accountID);
+
+        return new ModelAndView("roundUp.hbs", model);
+    }
+
+
     @POST("/transfer")
     public ModelAndView handleTransfer(@FormParam String email, @FormParam String to, @FormParam double amount) {
         if (email == null || to == null || amount <= 0) {
