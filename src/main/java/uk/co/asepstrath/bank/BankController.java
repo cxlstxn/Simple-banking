@@ -35,10 +35,20 @@ public class BankController {
         if (email == null || password == null || email.isEmpty() || password.isEmpty()) {
             throw new StatusCodeException(StatusCode.BAD_REQUEST, "Email and password are required.");
         }
-        ctx.session().put("email", email);
-        ctx.setResponseCode(StatusCode.OK_CODE);
-        ctx.sendRedirect("/scotbank/dashboard");
-        return null;
+        DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (dbController.emailExists(email)) {
+            if (dbController.verifyPassword(password, dbController.getPasswordFromEmail(email))) {
+                ctx.session().put("email", email);
+                ctx.setResponseCode(StatusCode.OK_CODE);
+                ctx.sendRedirect("/scotbank/dashboard");
+                return null;
+            } else {
+                throw new StatusCodeException(StatusCode.BAD_REQUEST, "Incorrect password.");
+            }
+        } else {
+            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Email not found.");
+        }
     }
 
     @GET("/dashboard")
@@ -103,20 +113,20 @@ public class BankController {
 
         dbController.transferFunds(fromAccountID, toAccountID, amount);
 
-        Map<String, Object> model = new HashMap<>();
-        model.put("email", email);
-        model.put("name", dbController.getNamefromID(fromAccountID));
-        model.put("balance", dbController.getBalanceFromID(fromAccountID));
-        model.put("id", fromAccountID);
-        model.put("transactions", dbController.getTransactionsById(fromAccountID));
+    Map<String, Object> model = new HashMap<>();
+    model.put("email", email);
+    model.put("name", dbController.getNamefromID(fromAccountID));
+    model.put("balance", dbController.getBalanceFromID(fromAccountID));
+    model.put("id", fromAccountID);
+    model.put("transactions", dbController.getTransactionsById(fromAccountID));
 
-        return new ModelAndView("dashboard.hbs", model);
+    return new ModelAndView("dashboard.hbs", model);
     }
 
     @GET("/signup")
     public ModelAndView signup() {
-        Map<String, Object> model = new HashMap<>();
-        return new ModelAndView("signup.hbs",model);
+    Map<String, Object> model = new HashMap<>();
+    return new ModelAndView("signup.hbs",model);
     }
 
     @POST("/signup")
@@ -130,7 +140,7 @@ public class BankController {
         dbController.createUser(email, name, password, id);
 
         dbController.addAccount(new Account(id, name, 0));
-
+        
         // Redirect to login page
         Map<String, Object> model = new HashMap<>();
         return new ModelAndView("login.hbs", model);

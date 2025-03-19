@@ -211,7 +211,7 @@ public class DatabaseController {
             preparedStatement.setObject(1, UUID.randomUUID());
             preparedStatement.setString(2, email);
             preparedStatement.setString(3, name);
-            preparedStatement.setString(4, password);
+            preparedStatement.setString(4, encryptPassword(password));
             preparedStatement.setString(5, "User");
             preparedStatement.setObject(6, account);
             preparedStatement.executeUpdate();
@@ -316,19 +316,36 @@ public class DatabaseController {
         return BCrypt.checkpw(enteredPassword, encryptedPassword);
     }
 
-    public boolean validateUser(String email, String password) {
-        String query = "SELECT Password FROM Users WHERE Email = ?";
+
+    public boolean emailExists(String email) {
+        String query = "SELECT Email FROM Users WHERE Email = ?";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, email);
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
-                    return verifyPassword(password, rs.getString("Password"));
+                    return true;
                 }
             }
         } catch (SQLException e) {
             log.error("Error validating user with Email: " + email, e);
         }
         return false;
+    }
+
+    public String getPasswordFromEmail(String email) {
+        String query = "SELECT Password FROM Users WHERE Email = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, email);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("Password");
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving password for user with Email: " + email, e);
+        }
+        return null;
     }
 }
