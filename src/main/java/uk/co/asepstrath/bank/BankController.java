@@ -32,6 +32,7 @@ public class BankController {
         return new ModelAndView("login.hbs", model);
     }
 
+
     @POST("/login")
     public ModelAndView handleLogin(@FormParam String email, @FormParam String password, Context ctx) {
         if (email == null || password == null || email.isEmpty() || password.isEmpty()) {
