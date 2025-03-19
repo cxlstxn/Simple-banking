@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,7 +26,8 @@ public class BankController {
     }
 
     @GET("/login")
-    public ModelAndView login() {
+    public ModelAndView login(Context ctx) {
+        ctx.session().destroy();
         Map<String, Object> model = new HashMap<>();
         return new ModelAndView("login.hbs", model);
     }
@@ -35,6 +37,8 @@ public class BankController {
         if (email == null || password == null || email.isEmpty() || password.isEmpty()) {
             throw new StatusCodeException(StatusCode.BAD_REQUEST, "Email and password are required.");
         }
+
+
         DatabaseController dbController = new DatabaseController(dataSource);
 
         if (dbController.emailExists(email)) {
@@ -56,17 +60,41 @@ public class BankController {
         String email = ctx.session().get("email").valueOrNull();
         if (email == null) {
             ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
             return null;
         }
 
         Map<String, Object> model = new HashMap<>();
         DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (dbController.getRoleFromEmail(email).equals("admin")) {
+            ctx.sendRedirect("/scotbank/adminDashboard");
+            return null;
+        }
+
         UUID accountID = dbController.getIDfromEmail(email);
+        List<Transaction> transactions = dbController.getTransactionsById(accountID);
+
+        for (Transaction transaction : transactions) {
+            if (transaction.getFrom() != null) {
+                transaction.setFrom(dbController.getNamefromID(UUID.fromString(transaction.getFrom())));
+            }
+
+            if (transaction.getTo() != null) {
+                if (transaction.getTo().length() <= 3) {
+                    transaction.setTo(dbController.getBusinessName(transaction.getTo()));
+                } else {
+                    transaction.setTo(dbController.getNamefromID(UUID.fromString(transaction.getTo())));
+                }
+            }
+                
+        }
+        
         model.put("email", email);
         model.put("name", dbController.getNamefromID(accountID));
         model.put("balance", dbController.getBalanceFromID(accountID));
         model.put("id", accountID);
-        model.put("transactions", dbController.getTransactionsById(accountID));
+        model.put("transactions", transactions);
         return new ModelAndView("dashboard.hbs", model);
     }
 
@@ -75,6 +103,7 @@ public class BankController {
         String email = ctx.session().get("email").valueOrNull();
         if (email == null) {
             ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
             return null;
         }
 
@@ -137,13 +166,80 @@ public class BankController {
         DatabaseController dbController = new DatabaseController(dataSource, logger);
         UUID id = UUID.randomUUID();
 
-        dbController.createUser(email, name, password, id);
+        dbController.createUser(email, name, password, "user", id);
 
         dbController.addAccount(new Account(id, name, 0));
         
         // Redirect to login page
         Map<String, Object> model = new HashMap<>();
         return new ModelAndView("login.hbs", model);
+    }
+
+
+    @GET("/adminDashboard")
+    public ModelAndView adminDashboard(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (!dbController.getRoleFromEmail(email).equals("admin")) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+        return new ModelAndView("adminDashboard.hbs", model);
+    }
+
+    @GET("/adminTransactions")
+    public ModelAndView adminTransactions(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (!dbController.getRoleFromEmail(email).equals("admin")) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+        List<Transaction> transactions = dbController.getAllTransactions();
+
+        model.put("transactions", transactions);
+        return new ModelAndView("adminTransactions.hbs", model);
+    }
+
+    @GET("/adminAccounts")
+    public ModelAndView adminAccounts(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (!dbController.getRoleFromEmail(email).equals("admin")) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+        List<Account> accounts = dbController.getAllAccounts();
+
+        model.put("accounts", accounts);
+        return new ModelAndView("adminAccounts.hbs", model);
     }
 
 }
