@@ -54,7 +54,7 @@ public class DatabaseController {
 
     private void createTables(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE, RoundUpEnabled BOOLEAN DEFAULT FALSE)");
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255), Type VARCHAR(255) )");
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
@@ -68,7 +68,7 @@ public class DatabaseController {
             String line;
             while ((line = br.readLine()) != null) {
                 List<String> lineData = Arrays.asList(line.split(","));
-                data.add(lineData);
+                data.add(lineData); 
             }
         } catch (IOException e) {
             log.error("Error reading businesses CSV file", e);
@@ -88,12 +88,13 @@ public class DatabaseController {
     }
 
     private void insertAccounts(Connection connection) throws SQLException {
-        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
+        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance, RoundUpEnabled) VALUES (?, ?, ?, ?)";
         try (PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
             for (Account account : App.accounts) {
                 preparedStatement.setObject(1, account.getId());
                 preparedStatement.setString(2, account.getName());
                 preparedStatement.setDouble(3, account.getBalance().doubleValue());
+                preparedStatement.setString(4, account.isRoundUpEnabled() ? "true" : "false");
                 preparedStatement.executeUpdate();
             }
         }
@@ -115,12 +116,13 @@ public class DatabaseController {
     }
 
     public void addAccount(Account account) {
-        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
+        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance, RoundUpEnabled) VALUES (?, ?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
             preparedStatement.setObject(1, account.getId());
             preparedStatement.setString(2, account.getName());
             preparedStatement.setDouble(3, account.getBalance().doubleValue());
+            preparedStatement.setBoolean(4, account.isRoundUpEnabled());
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             log.error("Error adding account: " + account.getName(), e);

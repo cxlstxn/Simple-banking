@@ -110,8 +110,7 @@ public class App extends Jooby {
 
         for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
             UUID id = UUID.fromString(jsonObject.getString("id"));
-            accounts.add(new Account(id, jsonObject.getString("name"),
-                    jsonObject.getJsonNumber("startingBalance").doubleValue()));
+            accounts.add(new Account(id, jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue(), jsonObject.getBoolean("roundUpEnabled")));
         }
     }
 

@@ -140,6 +140,18 @@ public class BankController {
         return new ModelAndView("roundUp.hbs", model);
     }
 
+    @POST("/roundup")
+    public void handleRoundUpToggle(@FormParam("enabled") boolean enabled, Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return;
+        }
+
+        System.out.println("Roundup enabled: " + enabled);
+    }
+
 
     @POST("/transfer")
     public ModelAndView handleTransfer(@FormParam String email, @FormParam String to, @FormParam double amount) {

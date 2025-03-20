@@ -20,7 +20,6 @@ public class Account {
         this(id, name, balance, false);
     }
 
-
     public void deposit(double amount) {
         balance = balance.add(BigDecimal.valueOf(amount));
     }
@@ -52,6 +51,10 @@ public class Account {
 
     public void setBalance(double balance) {
         this.balance = BigDecimal.valueOf(balance);
+    }
+
+    public boolean isRoundUpEnabled() {
+        return roundUpEnabled;
     }
 }
 

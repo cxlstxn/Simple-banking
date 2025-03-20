@@ -30,9 +30,28 @@
         </div>
         <h2>Enable Round Up</h2>
         <label class="switch">
-            <input type="checkbox">
+            <input type="checkbox" id="roundUpToggle" onchange="toggleRoundUp()">
             <span class="slider"></span>
         </label>
+        <script>
+            function toggleRoundUp() {
+            const isChecked = document.getElementById('roundUpToggle').checked;
+            fetch('/scotbank/roundup', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `enabled=${isChecked ? true : false}`
+            })
+            .then(response => response.json())
+            .then(data => {
+            console.log('Success:', data);
+            })
+            .catch((error) => {
+            console.error('Error:', error);
+            });
+            }
+        </script>
 
 
         <a class="logout" href="/scotbank/login">Logout</a>
