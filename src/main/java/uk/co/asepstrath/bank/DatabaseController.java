@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +45,8 @@ public class DatabaseController {
             // Insert transactions into the database
             insertTransactions(connection);
 
+            applyTransactionsToAccounts(connection);
+
         } catch (SQLException e) {
             log.error("Database Creation Error", e);
         }
@@ -51,10 +54,10 @@ public class DatabaseController {
 
     private void createTables(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255), Type VARCHAR(255) )");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255), Type VARCHAR(255) )");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
         }
     }
 
@@ -296,7 +299,6 @@ public class DatabaseController {
         return BCrypt.checkpw(enteredPassword, encryptedPassword);
     }
 
-
     public boolean emailExists(String email) {
         String query = "SELECT Email FROM Users WHERE Email = ?";
         try (Connection connection = dataSource.getConnection();
@@ -328,7 +330,6 @@ public class DatabaseController {
         }
         return null;
     }
-
 
     public String getBusinessName(String id) {
         String query = "SELECT Name FROM Businesses WHERE id = ?";
@@ -387,10 +388,9 @@ public class DatabaseController {
         return transactions;
     }
 
-
-    public List<Transaction> getAllSanctionedTransactions() {
+    public List<Transaction> getSanctionedTransactions() {
         List<Transaction> transactions = new ArrayList<>();
-        String query = "SELECT id, `From`, `To`, Amount, Date, Type FROM Transactions";
+        String query = "SELECT id, `From`, `To`, Amount, Date, Type FROM Transactions WHERE `From` IN (SELECT id FROM Businesses WHERE Sanctioned = 'true') OR `To` IN (SELECT id FROM Businesses WHERE Sanctioned = 'true')";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             try (ResultSet rs = preparedStatement.executeQuery()) {
@@ -433,5 +433,34 @@ public class DatabaseController {
         return accounts;
     }
 
+    void applyTransactionsToAccounts(Connection connection) {
+        List<Account> accounts = getAllAccounts();
+        List<Transaction> transactions = getAllTransactions();
 
+        for (Transaction transaction : transactions) {
+            for (Account account : accounts) {
+                if (account.getId().equals(transaction.getFrom())) {
+                    account.setBalance(account.getBalance().subtract(BigDecimal.valueOf(transaction.getAmount())).doubleValue());
+                }
+                if (account.getId().equals(transaction.getTo())) {
+                    account.setBalance(account.getBalance().add(BigDecimal.valueOf(transaction.getAmount())).doubleValue());
+                }
+            }
+        }
+
+        updateAccounts(connection, accounts);
+    }
+
+    private void updateAccounts(Connection connection, List<Account> accounts) {
+        String updateAccountSql = "UPDATE Accounts SET Balance = ? WHERE id = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(updateAccountSql)) {
+            for (Account account : accounts) {
+                preparedStatement.setDouble(1, account.getBalance().doubleValue());
+                preparedStatement.setObject(2, account.getId());
+                preparedStatement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            log.error("Error updating account balances", e);
+        }
+    }
 }

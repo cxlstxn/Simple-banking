@@ -241,6 +241,30 @@ public class BankController {
         return new ModelAndView("adminTransactions.hbs", model);
     }
 
+    @GET("/adminSanctioned")
+    public ModelAndView adminSanctioned(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (!dbController.getRoleFromEmail(email).equals("admin")) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+        List<Transaction> transactions = dbController.getSanctionedTransactions();
+
+        model.put("transactions", transactions);
+        return new ModelAndView("adminSanctioned.hbs", model);
+    }
+
+
     @GET("/adminAccounts")
     public ModelAndView adminAccounts(Context ctx) {
         String email = ctx.session().get("email").valueOrNull();

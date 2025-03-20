@@ -16,7 +16,7 @@ public class Account {
         this.roundUpEnabled = roundUpEnabled;
     }
 
-    public Account(UUID id,String name, double balance) {
+    public Account(UUID id, String name, double balance) {
         this(id, name, balance, false);
     }
 
@@ -27,7 +27,7 @@ public class Account {
 
     public void withdraw(double amount) {
         BigDecimal amountInBigDecimal = BigDecimal.valueOf(amount);
-        if(amountInBigDecimal.compareTo(balance) > 0){
+        if (amountInBigDecimal.compareTo(balance) > 0) {
             throw new ArithmeticException("Insufficient funds");
         }
         balance = balance.subtract(amountInBigDecimal);
@@ -49,4 +49,9 @@ public class Account {
     public String getId() {
         return id.toString();
     }
+
+    public void setBalance(double balance) {
+        this.balance = BigDecimal.valueOf(balance);
+    }
 }
+

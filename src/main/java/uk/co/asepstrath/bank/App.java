@@ -206,8 +206,8 @@ public class App extends Jooby {
         dbController.setupDatabase();
 
         // creating test user connected to already existing account from api
-        dbController.createUser("test@scotbank.com", "Ray VonRueden", "test", "user",
-                UUID.fromString("0002c352-6f10-4bd4-8783-074705090db4"));
+        dbController.createUser("test@scotbank.com", "Miss Lavina Waelchi", "test", "user",
+                UUID.fromString("006274fa-16fd-4a79-968b-df889c4a2e75"));
 
         dbController.createUser("manager@scotbank.com", "Finlay", "test", "admin",
         null);
