@@ -36,7 +36,8 @@ public class BankController {
     @POST("/login")
     public ModelAndView handleLogin(@FormParam String email, @FormParam String password, Context ctx) {
         if (email == null || password == null || email.isEmpty() || password.isEmpty()) {
-            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Email and password are required.");
+            ctx.sendRedirect("/scotbank/login");
+            return null;
         }
 
 
@@ -49,10 +50,12 @@ public class BankController {
                 ctx.sendRedirect("/scotbank/dashboard");
                 return null;
             } else {
-                throw new StatusCodeException(StatusCode.BAD_REQUEST, "Incorrect password.");
+                ctx.sendRedirect("/scotbank/login");
+                return null;
             }
         } else {
-            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Email not found.");
+            ctx.sendRedirect("/scotbank/login");
+            return null;
         }
     }
 
@@ -99,6 +102,26 @@ public class BankController {
         return new ModelAndView("dashboard.hbs", model);
     }
 
+    @GET("/spending")
+    public ModelAndView spending(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+        UUID accountID = dbController.getIDfromEmail(email);
+
+        List<CategoryAmount> categoryAmounts = dbController.getcategoryandamountspentfromId(accountID);
+        model.put("categoryAmounts", categoryAmounts);
+        
+        return new ModelAndView("spending.hbs", model);
+    }
+
+
     @GET("/transfer")
     public ModelAndView transfer(Context ctx) {
         String email = ctx.session().get("email").valueOrNull();
@@ -120,7 +143,7 @@ public class BankController {
     }
 
     @POST("/transfer")
-    public ModelAndView handleTransfer(@FormParam String email, @FormParam String to, @FormParam double amount) {
+    public ModelAndView handleTransfer(@FormParam String email, @FormParam String to, @FormParam double amount, Context ctx) {
         if (email == null || to == null || amount <= 0) {
             throw new StatusCodeException(StatusCode.BAD_REQUEST, "Invalid transfer details.");
         }
@@ -130,15 +153,18 @@ public class BankController {
         UUID toAccountID = UUID.fromString(to);
 
         if (fromAccountID == null || toAccountID == null) {
-            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Invalid account details.");
+            ctx.sendRedirect("/scotbank/dashboard");
+            return null;
         }
 
         if (fromAccountID.equals(toAccountID)) {
-            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Cannot transfer to the same account.");
+            ctx.sendRedirect("/scotbank/dashboard");
+            return null;
         }
 
         if (Double.parseDouble(dbController.getBalanceFromID(fromAccountID)) < amount) {
-            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Insufficient funds.");
+            ctx.sendRedirect("/scotbank/dashboard");
+            return null;
         }
 
         dbController.transferFunds(fromAccountID, toAccountID, amount);
@@ -160,16 +186,17 @@ public class BankController {
     }
 
     @POST("/signup")
-    public ModelAndView handleSignup(@FormParam String email, @FormParam String name, @FormParam String password) {
+    public ModelAndView handleSignup(@FormParam String email, @FormParam String name, @FormParam String password, Context ctx) {
         if (email == null || name == null || password == null || email.isEmpty() || name.isEmpty() || password.isEmpty()) {
-            throw new StatusCodeException(StatusCode.BAD_REQUEST, "Name and password are required.");
+            ctx.sendRedirect("/scotbank/signup");
+            return null;
         }
         DatabaseController dbController = new DatabaseController(dataSource, logger);
         UUID id = UUID.randomUUID();
 
         dbController.createUser(email, name, password, "user", id);
 
-        dbController.addAccount(new Account(id, name, 0));
+        dbController.addAccount(new Account(id, name, 0, false , "EH1 1AA"));
         
         // Redirect to login page
         Map<String, Object> model = new HashMap<>();
@@ -219,6 +246,30 @@ public class BankController {
         return new ModelAndView("adminTransactions.hbs", model);
     }
 
+    @GET("/adminSanctioned")
+    public ModelAndView adminSanctioned(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (!dbController.getRoleFromEmail(email).equals("admin")) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+        List<Transaction> transactions = dbController.getSanctionedTransactions();
+
+        model.put("transactions", transactions);
+        return new ModelAndView("adminSanctioned.hbs", model);
+    }
+
+
     @GET("/adminAccounts")
     public ModelAndView adminAccounts(Context ctx) {
         String email = ctx.session().get("email").valueOrNull();
@@ -240,6 +291,30 @@ public class BankController {
 
         model.put("accounts", accounts);
         return new ModelAndView("adminAccounts.hbs", model);
+    }
+
+
+    @GET("/adminTen")
+    public ModelAndView adminTen(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (!dbController.getRoleFromEmail(email).equals("admin")) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+        List<Account> accounts = dbController.getTopTenBiggestSpenders();
+
+        model.put("accounts", accounts);
+        return new ModelAndView("adminten.hbs", model);
     }
 
 }

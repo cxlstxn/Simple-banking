@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +45,8 @@ public class DatabaseController {
             // Insert transactions into the database
             insertTransactions(connection);
 
+            applyTransactionsToAccounts(connection);
+
         } catch (SQLException e) {
             log.error("Database Creation Error", e);
         }
@@ -51,10 +54,10 @@ public class DatabaseController {
 
     private void createTables(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255), Type VARCHAR(255) )");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
-        stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE, RoundUpEnabled BOOLEAN, Postcode VARCHAR(255))");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255), Type VARCHAR(255) )");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
         }
     }
 
@@ -85,12 +88,14 @@ public class DatabaseController {
     }
 
     private void insertAccounts(Connection connection) throws SQLException {
-        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
+        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance, RoundUpEnabled, Postcode) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
             for (Account account : App.accounts) {
                 preparedStatement.setObject(1, account.getId());
                 preparedStatement.setString(2, account.getName());
                 preparedStatement.setDouble(3, account.getBalance().doubleValue());
+                preparedStatement.setString(4, account.isRoundUpEnabled() ? "true" : "false");
+                preparedStatement.setString(5, account.getPostcode());
                 preparedStatement.executeUpdate();
             }
         }
@@ -112,12 +117,14 @@ public class DatabaseController {
     }
 
     public void addAccount(Account account) {
-        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
+        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance, RoundUpEnabled, Postcode) VALUES (?, ?, ?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
             preparedStatement.setObject(1, account.getId());
             preparedStatement.setString(2, account.getName());
             preparedStatement.setDouble(3, account.getBalance().doubleValue());
+            preparedStatement.setString(4, account.isRoundUpEnabled() ? "true" : "false");
+            preparedStatement.setString(5, account.getPostcode());
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             log.error("Error adding account: " + account.getName(), e);
@@ -296,7 +303,6 @@ public class DatabaseController {
         return BCrypt.checkpw(enteredPassword, encryptedPassword);
     }
 
-
     public boolean emailExists(String email) {
         String query = "SELECT Email FROM Users WHERE Email = ?";
         try (Connection connection = dataSource.getConnection();
@@ -328,7 +334,6 @@ public class DatabaseController {
         }
         return null;
     }
-
 
     public String getBusinessName(String id) {
         String query = "SELECT Name FROM Businesses WHERE id = ?";
@@ -387,9 +392,34 @@ public class DatabaseController {
         return transactions;
     }
 
+    public List<Transaction> getSanctionedTransactions() {
+        List<Transaction> transactions = new ArrayList<>();
+        String query = "SELECT id, `From`, `To`, Amount, Date, Type FROM Transactions WHERE `From` IN (SELECT id FROM Businesses WHERE Sanctioned = 'true') OR `To` IN (SELECT id FROM Businesses WHERE Sanctioned = 'true')";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    UUID transactionId = UUID.fromString(rs.getString("id"));
+                    String from = (rs.getString("From"));
+                    String to = (rs.getString("To"));
+                    double amount = rs.getDouble("Amount");
+                    String date = rs.getString("Date");
+                    String type = rs.getString("Type");
+                    transactions.add(new Transaction(transactionId, amount, date, from, to, type));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving all transactions", e);
+        }
+
+        Collections.reverse(transactions); // reversing so most recent transactions are first
+
+        return transactions;
+    }
+
     public List<Account> getAllAccounts() {
         List<Account> accounts = new ArrayList<>();
-        String query = "SELECT id, Name, Balance FROM Accounts";
+        String query = "SELECT id, Name, Balance, RoundUpEnabled, Postcode FROM Accounts";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             try (ResultSet rs = preparedStatement.executeQuery()) {
@@ -397,7 +427,9 @@ public class DatabaseController {
                     UUID accountId = UUID.fromString(rs.getString("id"));
                     String name = rs.getString("Name");
                     double balance = rs.getDouble("Balance");
-                    accounts.add(new Account(accountId, name, balance));
+                    String postcode = rs.getString("Postcode");
+                    boolean roundUpEnabled = rs.getBoolean("RoundUpEnabled");
+                    accounts.add(new Account(accountId, name, balance, roundUpEnabled, postcode));
                 }
             }
         } catch (SQLException e) {
@@ -407,4 +439,75 @@ public class DatabaseController {
         return accounts;
     }
 
+    void applyTransactionsToAccounts(Connection connection) {
+        List<Account> accounts = getAllAccounts();
+        List<Transaction> transactions = getAllTransactions();
+
+        for (Transaction transaction : transactions) {
+            for (Account account : accounts) {
+                if (account.getId().equals(transaction.getFrom())) {
+                    account.setBalance(account.getBalance().subtract(BigDecimal.valueOf(transaction.getAmount())).doubleValue());
+                }
+                if (account.getId().equals(transaction.getTo())) {
+                    account.setBalance(account.getBalance().add(BigDecimal.valueOf(transaction.getAmount())).doubleValue());
+                }
+            }
+        }
+
+        updateAccounts(connection, accounts);
+    }
+
+    private void updateAccounts(Connection connection, List<Account> accounts) {
+        String updateAccountSql = "UPDATE Accounts SET Balance = ? WHERE id = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(updateAccountSql)) {
+            for (Account account : accounts) {
+                preparedStatement.setDouble(1, account.getBalance().doubleValue());
+                preparedStatement.setObject(2, account.getId());
+                preparedStatement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            log.error("Error updating account balances", e);
+        }
+    }
+
+
+    public List<Account> getTopTenBiggestSpenders() {
+        List<Account> accounts = new ArrayList<>();
+        String query = "SELECT id, Name, Balance, RoundUpEnabled, Postcode FROM Accounts ORDER BY (SELECT SUM(Amount) FROM Transactions WHERE `From` = Accounts.id) DESC LIMIT 10";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    UUID accountId = UUID.fromString(rs.getString("id"));
+                    String name = rs.getString("Name");
+                    double balance = rs.getDouble("Balance");
+                    String postcode = rs.getString("Postcode");
+                    boolean roundUpEnabled = rs.getBoolean("RoundUpEnabled");
+                    accounts.add(new Account(accountId, name, balance, roundUpEnabled, postcode));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving top ten biggest spenders", e);
+        }
+        return accounts;
+    }
+
+    public List<CategoryAmount> getcategoryandamountspentfromId(UUID id) {
+        List<CategoryAmount> categoryAmounts = new ArrayList<>();
+        String query = "SELECT Category, SUM(Amount) FROM Transactions JOIN Businesses ON Transactions.`To` = Businesses.id WHERE `From` = ? GROUP BY Category";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setObject(1, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    String category = rs.getString("Category");
+                    double amount = rs.getDouble("SUM(Amount)");
+                    categoryAmounts.add(new CategoryAmount(category, amount));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving category and amount spent for account with ID: " + id, e);
+        }
+        return categoryAmounts;
+    }
 }
