@@ -24,6 +24,10 @@ import javax.json.JsonReader;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+
 public class App extends Jooby {
 
     public static final List<Account> accounts = new ArrayList<>(); // Temporary account data
@@ -72,48 +76,83 @@ public class App extends Jooby {
     public void onStart() {
         Logger log = getLog();
         log.info("Starting Up...");
-
-        fetchAccounts();
+        String accountsData = null;
+        try {
+            accountsData = getAccountInformation(getOAuth2Token());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        parseAccountsData(accountsData);
         fetchTransactions();
         setupDatabase(log);
     }
 
-    private void fetchAccounts() {
-        try {
-            URL url = new URL("https://api.asep-strath.co.uk/api/accounts");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.connect();
+    private static String getOAuth2Token() throws IOException {
+        String clientId = "scotbank";
+        String clientSecret = "this1password2is3not4secure";
+        String auth = clientId + ":" + clientSecret;
+        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
 
-            int responseCode = conn.getResponseCode();
-            if (responseCode != 200) {
-                throw new RuntimeException("HttpResponseCode: " + responseCode);
+        URL url = new URL("https://api.asep-strath.co.uk/oauth2/token");
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Authorization", "Basic " + encodedAuth);
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setDoOutput(true);
+
+        String urlParameters = "grant_type=client_credentials";
+        try (OutputStream os = connection.getOutputStream()) {
+            byte[] input = urlParameters.getBytes("utf-8");
+            os.write(input, 0, input.length);
+        }
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            try (Scanner scanner = new Scanner(connection.getInputStream(), "UTF-8")) {
+                String responseBody = scanner.useDelimiter("\\A").next();
+                return parseAccessToken(responseBody);
             }
-
-            StringBuilder inline = new StringBuilder();
-            Scanner scanner = new Scanner(url.openStream());
-            while (scanner.hasNext()) {
-                inline.append(scanner.nextLine());
-            }
-            scanner.close();
-
-            parseAccountsData(inline.toString());
-        } catch (IOException e) {
-            e.printStackTrace();
+        } else {
+            throw new IOException("Failed to fetch OAuth2 token, response code: " + responseCode);
         }
     }
 
-    private void parseAccountsData(String data) {
+    private static String parseAccessToken(String responseBody) {
+        int startIndex = responseBody.indexOf("\"access_token\":\"") + 16;
+        int endIndex = responseBody.indexOf("\"", startIndex);
+        return responseBody.substring(startIndex, endIndex);
+    }
+
+    private static String getAccountInformation(String token) throws IOException {
+        URL url = new URL("https://api.asep-strath.co.uk/api/accounts?include=,postcode");
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Authorization", "Bearer " + token);
+        connection.setRequestProperty("Accept", "application/json");
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            try (InputStream is = connection.getInputStream();
+                 Scanner scanner = new Scanner(is, "UTF-8")) {
+                String responseBody = scanner.useDelimiter("\\A").next();
+                return responseBody;
+            }
+        } else {
+            throw new IOException("Failed to fetch account information, response code: " + responseCode);
+        }
+    }
+
+    private static void parseAccountsData(String data) {
         JsonReader jsonReader = Json.createReader(new StringReader(data));
         JsonArray jsonArray = jsonReader.readArray();
         jsonReader.close();
 
         for (JsonObject jsonObject : jsonArray.getValuesAs(JsonObject.class)) {
             UUID id = UUID.fromString(jsonObject.getString("id"));
-            accounts.add(new Account(id, jsonObject.getString("name"),
-                    jsonObject.getJsonNumber("startingBalance").doubleValue()));
+            accounts.add(new Account(id, jsonObject.getString("name"), jsonObject.getJsonNumber("startingBalance").doubleValue(), false, jsonObject.getString("postcode")));
         }
     }
+
 
     private void fetchTransactions() {
         try {

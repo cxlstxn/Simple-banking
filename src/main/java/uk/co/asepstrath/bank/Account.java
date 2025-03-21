@@ -8,16 +8,18 @@ public class Account {
     private final UUID id;
     private String name;
     private boolean roundUpEnabled;
+    private String postcode; 
 
-    public Account(UUID id, String name, double balance, boolean roundUpEnabled) { // This is for when the api is putting in data for an account that already exists
+    public Account(UUID id, String name, double balance, boolean roundUpEnabled, String postcode) { // This is for when the api is putting in data for an account that already exists
         this.id = id;
         this.name = name;
         this.balance = BigDecimal.valueOf(balance);
         this.roundUpEnabled = roundUpEnabled;
+        this.postcode = postcode;
     }
 
-    public Account(UUID id, String name, double balance) {
-        this(id, name, balance, false);
+    public Account(UUID id, String name, double balance, String postcode) {
+        this(id, name, balance, false, postcode);
     }
 
 
@@ -53,5 +55,18 @@ public class Account {
     public void setBalance(double balance) {
         this.balance = BigDecimal.valueOf(balance);
     }
+
+    public boolean isRoundUpEnabled() {
+        return roundUpEnabled;
+    }
+
+    public void setRoundUpEnabled(boolean roundUpEnabled) {
+        this.roundUpEnabled = roundUpEnabled;
+    }
+
+    public String getPostcode() {
+        return postcode;
+    }
+
 }
 

@@ -191,7 +191,7 @@ public class BankController {
 
         dbController.createUser(email, name, password, "user", id);
 
-        dbController.addAccount(new Account(id, name, 0));
+        dbController.addAccount(new Account(id, name, 0, false , "EH1 1AA"));
         
         // Redirect to login page
         Map<String, Object> model = new HashMap<>();
@@ -286,6 +286,30 @@ public class BankController {
 
         model.put("accounts", accounts);
         return new ModelAndView("adminAccounts.hbs", model);
+    }
+
+
+    @GET("/adminTen")
+    public ModelAndView adminTen(Context ctx) {
+        String email = ctx.session().get("email").valueOrNull();
+        if (email == null) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+
+        Map<String, Object> model = new HashMap<>();
+        DatabaseController dbController = new DatabaseController(dataSource);
+
+        if (!dbController.getRoleFromEmail(email).equals("admin")) {
+            ctx.sendRedirect("/scotbank/login");
+            ctx.session().destroy();
+            return null;
+        }
+        List<Account> accounts = dbController.getTopTenBiggestSpenders();
+
+        model.put("accounts", accounts);
+        return new ModelAndView("adminten.hbs", model);
     }
 
 }

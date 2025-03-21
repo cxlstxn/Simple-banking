@@ -54,7 +54,7 @@ public class DatabaseController {
 
     private void createTables(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE)");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Accounts (id UUID PRIMARY KEY, Name VARCHAR(255), Balance DOUBLE, RoundUpEnabled BOOLEAN, Postcode VARCHAR(255))");
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Transactions (id UUID PRIMARY KEY, `From` VARCHAR(255), `To` VARCHAR(255), Amount DOUBLE, Date VARCHAR(255), Type VARCHAR(255) )");
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Businesses (id VARCHAR(255), `Name` VARCHAR(255), `Category` VARCHAR(255), `Sanctioned` VARCHAR(255))");
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Users (id UUID PRIMARY KEY, `Email` VARCHAR(255), `Name` VARCHAR(255), `Password` VARCHAR(255), `Role` VARCHAR(255), `Account` UUID)");
@@ -88,12 +88,14 @@ public class DatabaseController {
     }
 
     private void insertAccounts(Connection connection) throws SQLException {
-        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
+        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance, RoundUpEnabled, Postcode) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
             for (Account account : App.accounts) {
                 preparedStatement.setObject(1, account.getId());
                 preparedStatement.setString(2, account.getName());
                 preparedStatement.setDouble(3, account.getBalance().doubleValue());
+                preparedStatement.setString(4, account.isRoundUpEnabled() ? "true" : "false");
+                preparedStatement.setString(5, account.getPostcode());
                 preparedStatement.executeUpdate();
             }
         }
@@ -115,12 +117,14 @@ public class DatabaseController {
     }
 
     public void addAccount(Account account) {
-        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance) VALUES (?, ?, ?)";
+        String insertAccountSql = "INSERT INTO Accounts (id, Name, Balance, RoundUpEnabled, Postcode) VALUES (?, ?, ?, ?, ?)";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(insertAccountSql)) {
             preparedStatement.setObject(1, account.getId());
             preparedStatement.setString(2, account.getName());
             preparedStatement.setDouble(3, account.getBalance().doubleValue());
+            preparedStatement.setString(4, account.isRoundUpEnabled() ? "true" : "false");
+            preparedStatement.setString(5, account.getPostcode());
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
             log.error("Error adding account: " + account.getName(), e);
@@ -415,7 +419,7 @@ public class DatabaseController {
 
     public List<Account> getAllAccounts() {
         List<Account> accounts = new ArrayList<>();
-        String query = "SELECT id, Name, Balance FROM Accounts";
+        String query = "SELECT id, Name, Balance, RoundUpEnabled, Postcode FROM Accounts";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             try (ResultSet rs = preparedStatement.executeQuery()) {
@@ -423,7 +427,9 @@ public class DatabaseController {
                     UUID accountId = UUID.fromString(rs.getString("id"));
                     String name = rs.getString("Name");
                     double balance = rs.getDouble("Balance");
-                    accounts.add(new Account(accountId, name, balance));
+                    String postcode = rs.getString("Postcode");
+                    boolean roundUpEnabled = rs.getBoolean("RoundUpEnabled");
+                    accounts.add(new Account(accountId, name, balance, roundUpEnabled, postcode));
                 }
             }
         } catch (SQLException e) {
@@ -462,5 +468,27 @@ public class DatabaseController {
         } catch (SQLException e) {
             log.error("Error updating account balances", e);
         }
+    }
+
+
+    public List<Account> getTopTenBiggestSpenders() {
+        List<Account> accounts = new ArrayList<>();
+        String query = "SELECT id, Name, Balance, RoundUpEnabled, Postcode FROM Accounts ORDER BY (SELECT SUM(Amount) FROM Transactions WHERE `From` = Accounts.id) DESC LIMIT 10";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    UUID accountId = UUID.fromString(rs.getString("id"));
+                    String name = rs.getString("Name");
+                    double balance = rs.getDouble("Balance");
+                    String postcode = rs.getString("Postcode");
+                    boolean roundUpEnabled = rs.getBoolean("RoundUpEnabled");
+                    accounts.add(new Account(accountId, name, balance, roundUpEnabled, postcode));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving top ten biggest spenders", e);
+        }
+        return accounts;
     }
 }
