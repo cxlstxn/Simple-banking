@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="/assets/dashstyles.css">
+</head>
+<body>
+    <header>
+        <h1>Scotbank</h1>
+    </header>
+
+    <ul>
+        <li><a href="/scotbank/dashboard">Dashboard</a></li>
+        <li><a href="/scotbank/transfer">Transfer</a></li>
+        <li><a class="active">Spending Summary</a></li>
+    </ul>
+        <section id="transactions">
+            <h2>Spending Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount spent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each categoryAmounts}}
+                        <tr class="transaction-box">
+                            <td>{{this.category}}</td>
+                            <td>{{this.amount}}</td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+                </tbody>
+            </table>
+        </section>
+
+        <a class="logout" href="/scotbank/login">Logout</a>
+    </main>
+</body>
+</html>

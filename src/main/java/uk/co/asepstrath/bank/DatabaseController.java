@@ -491,4 +491,23 @@ public class DatabaseController {
         }
         return accounts;
     }
+
+    public List<CategoryAmount> getcategoryandamountspentfromId(UUID id) {
+        List<CategoryAmount> categoryAmounts = new ArrayList<>();
+        String query = "SELECT Category, SUM(Amount) FROM Transactions JOIN Businesses ON Transactions.`To` = Businesses.id WHERE `From` = ? GROUP BY Category";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setObject(1, id);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    String category = rs.getString("Category");
+                    double amount = rs.getDouble("SUM(Amount)");
+                    categoryAmounts.add(new CategoryAmount(category, amount));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("Error retrieving category and amount spent for account with ID: " + id, e);
+        }
+        return categoryAmounts;
+    }
 }

@@ -10,7 +10,7 @@ public class Account {
     private boolean roundUpEnabled;
     private String postcode; 
 
-    public Account(UUID id, String name, double balance, boolean roundUpEnabled, String postcode) { // This is for when the api is putting in data for an account that already exists
+    public Account(UUID id, String name, double balance, boolean roundUpEnabled, String postcode) { 
         this.id = id;
         this.name = name;
         this.balance = BigDecimal.valueOf(balance);
@@ -60,9 +60,6 @@ public class Account {
         return roundUpEnabled;
     }
 
-    public void setRoundUpEnabled(boolean roundUpEnabled) {
-        this.roundUpEnabled = roundUpEnabled;
-    }
 
     public String getPostcode() {
         return postcode;
