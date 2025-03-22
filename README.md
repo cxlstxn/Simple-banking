@@ -1,6 +1,5 @@
-# Your-Bank
+# Bank
 
-Welcome to your-bank!!
 
 ## running
 
@@ -10,6 +9,3 @@ Welcome to your-bank!!
 
     ./mvnw.cmd clean package
 
-
-
-## yo
